@@ -1,0 +1,23 @@
+{
+  "files": {
+    "main.css": "/cloud-failover-management-ui/static/css/main.d1b05096.chunk.css",
+    "main.js": "/cloud-failover-management-ui/static/js/main.45df2cac.chunk.js",
+    "main.js.map": "/cloud-failover-management-ui/static/js/main.45df2cac.chunk.js.map",
+    "runtime-main.js": "/cloud-failover-management-ui/static/js/runtime-main.2dd036f0.js",
+    "runtime-main.js.map": "/cloud-failover-management-ui/static/js/runtime-main.2dd036f0.js.map",
+    "static/js/2.3bb72be6.chunk.js": "/cloud-failover-management-ui/static/js/2.3bb72be6.chunk.js",
+    "static/js/2.3bb72be6.chunk.js.map": "/cloud-failover-management-ui/static/js/2.3bb72be6.chunk.js.map",
+    "index.html": "/cloud-failover-management-ui/index.html",
+    "precache-manifest.0b4d263fab23cee03321f00dddd11358.js": "/cloud-failover-management-ui/precache-manifest.0b4d263fab23cee03321f00dddd11358.js",
+    "service-worker.js": "/cloud-failover-management-ui/service-worker.js",
+    "static/css/main.d1b05096.chunk.css.map": "/cloud-failover-management-ui/static/css/main.d1b05096.chunk.css.map",
+    "static/js/2.3bb72be6.chunk.js.LICENSE": "/cloud-failover-management-ui/static/js/2.3bb72be6.chunk.js.LICENSE",
+    "static/media/logo.svg": "/cloud-failover-management-ui/static/media/logo.5d5d9eef.svg"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.2dd036f0.js",
+    "static/js/2.3bb72be6.chunk.js",
+    "static/css/main.d1b05096.chunk.css",
+    "static/js/main.45df2cac.chunk.js"
+  ]
+}
