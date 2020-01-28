@@ -7,5 +7,5 @@ import org.springframework.boot.runApplication
 class CloudFailoverApplication
 
 fun main(args: Array<String>) {
-	runApplication<CloudFailoverApplication>(*args)
+    runApplication<CloudFailoverApplication>(*args)
 }
