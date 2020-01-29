@@ -27,8 +27,6 @@ class AwsServiceProviderTests {
     @Test
     fun createListDeleteInstance() {
         val serviceProvider = ServiceProvider()
-        //AKIA5PD6FOG26ZJOBWCI
-        //xD4mq0acXyic8mubx0sdWe/3x7tj3ilDfoqpYbog
         logger.info(AWS_ACCESS_KEY)
         logger.info(AWS_SECRET_KEY)
         serviceProvider.initAws(AWS_ACCESS_KEY, AWS_SECRET_KEY)
