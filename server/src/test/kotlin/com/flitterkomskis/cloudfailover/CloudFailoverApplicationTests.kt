@@ -7,9 +7,7 @@ import org.springframework.test.context.TestPropertySource
 @SpringBootTest
 @TestPropertySource(properties = arrayOf("spring.cloud.task.closecontext_enabled=false"))
 class CloudFailoverApplicationTests {
-
-	@Test
-	fun contextLoads() {
-	}
-
+    @Test
+    fun contextLoads() {
+    }
 }
