@@ -20,6 +20,8 @@ extra["azureVersion"] = "2.2.0"
 extra["springCloudVersion"] = "Hoxton.SR1"
 
 dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-data-rest")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.springframework.boot:spring-boot-starter-data-mongodb")
     implementation("com.microsoft.azure:azure-spring-boot-starter")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -30,6 +32,7 @@ dependencies {
     // implementation("org.springframework.cloud:spring-cloud-starter-aws")
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
+    testImplementation("com.jayway.jsonpath:json-path")
     }
     testImplementation("de.flapdoodle.embed:de.flapdoodle.embed.mongo")
 }
