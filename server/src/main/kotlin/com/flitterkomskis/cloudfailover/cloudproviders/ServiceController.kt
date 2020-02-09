@@ -30,7 +30,7 @@ class ServiceController {
     fun editInstance(@PathVariable instanceId: String) {}
 
     @DeleteMapping("/instances/{instanceId}")
-    fun deleteInstance(@PathVariable vmId: String) {}
+    fun deleteInstance(@PathVariable instanceId: String) {}
 
     @PutMapping("/instances/start/{instanceId}")
     fun startInstance(@PathVariable instanceId: Int) {}

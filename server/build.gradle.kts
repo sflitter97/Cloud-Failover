@@ -29,7 +29,7 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-gcp-starter")
     implementation("software.amazon.awssdk:ec2")
     implementation("software.amazon.awssdk:sts")
-    // implementation("org.springframework.cloud:spring-cloud-starter-aws")
+    implementation("com.google.apis:google-api-services-compute:v1-rev232-1.25.0")
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     testImplementation("com.jayway.jsonpath:json-path")
