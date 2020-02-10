@@ -1,10 +1,13 @@
 package com.flitterkomskis.cloudfailover.cloudproviders.awsserviceprovider
 
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceHandle
+import com.flitterkomskis.cloudfailover.cloudproviders.InstanceInfo
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
 import com.flitterkomskis.cloudfailover.cloudproviders.ServiceProvider
+import org.springframework.data.annotation.TypeAlias
 
-class AwsInstanceHandle(val instanceId: String, val region: String) : InstanceHandle {
+@TypeAlias("AwsInstanceHandle")
+data class AwsInstanceHandle(val instanceId: String, val region: String) : InstanceHandle {
     override fun acceptDeleteInstance(provider: ServiceProvider): Boolean {
         return provider.deleteInstance(this)
     }
@@ -19,5 +22,9 @@ class AwsInstanceHandle(val instanceId: String, val region: String) : InstanceHa
 
     override fun acceptWaitForState(provider: ServiceProvider, state: InstanceState, timeout: Int): Boolean {
         return provider.waitForState(this, state, timeout)
+    }
+
+    override fun acceptGetInstance(provider: ServiceProvider): InstanceInfo {
+        return provider.getInstance(this)
     }
 }

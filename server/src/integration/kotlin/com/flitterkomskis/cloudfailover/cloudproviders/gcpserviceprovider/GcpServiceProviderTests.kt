@@ -15,7 +15,7 @@ import org.springframework.test.context.TestPropertySource
 class GcpServiceProviderTests {
     @Test
     fun contextLoads() {
-        //Empty function to make sure context loads
+        // Empty function to make sure context loads
     }
 
     @Test

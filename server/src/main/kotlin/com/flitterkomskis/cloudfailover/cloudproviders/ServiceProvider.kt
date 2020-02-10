@@ -4,15 +4,27 @@ import com.flitterkomskis.cloudfailover.cloudproviders.awsserviceprovider.AwsIns
 import com.flitterkomskis.cloudfailover.cloudproviders.awsserviceprovider.AwsServiceProvider
 import com.flitterkomskis.cloudfailover.cloudproviders.gcpserviceprovider.GcpInstanceHandle
 import com.flitterkomskis.cloudfailover.cloudproviders.gcpserviceprovider.GcpServiceProvider
+import javax.annotation.PostConstruct
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 
+@Component
 class ServiceProvider {
+    private val logger: Logger = LoggerFactory.getLogger(ServiceProvider::class.java)
     private val AWS_NOT_INITIALIZED_MESSAGE = "AWS not initialized."
     private val GCP_NOT_INITIALIZED_MESSAGE = "GCP not initialized."
     private var awsProvider: AwsServiceProvider? = null
     private var gcpProvider: GcpServiceProvider? = null
 
+    @PostConstruct
+    fun initAws() {
+        initAws(System.getenv("AWS_ACCESS_KEY"), System.getenv("AWS_SECRET_KEY"))
+    }
+
     fun initAws(accessKey: String, secretKey: String) {
         awsProvider = AwsServiceProvider(accessKey, secretKey)
+        logger.info("AWS initialized")
     }
 
     fun initGcp() {
@@ -24,6 +36,14 @@ class ServiceProvider {
         instances += awsProvider?.listInstances() ?: mutableListOf()
         instances += gcpProvider?.listInstances() ?: mutableListOf()
         return instances
+    }
+
+    fun getInstance(handle: InstanceHandle): InstanceInfo {
+        return handle.acceptGetInstance(this)
+    }
+
+    fun getInstance(handle: AwsInstanceHandle): InstanceInfo {
+        return awsProvider?.getInstance(handle) ?: throw ServiceProviderException(AWS_NOT_INITIALIZED_MESSAGE)
     }
 
     fun createInstance(provider: Provider, name: String, type: String, imageId: String, region: String): InstanceHandle {

@@ -1,6 +1,7 @@
 package com.flitterkomskis.cloudfailover.cloudproviders.gcpserviceprovider
 
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceHandle
+import com.flitterkomskis.cloudfailover.cloudproviders.InstanceInfo
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
 import com.flitterkomskis.cloudfailover.cloudproviders.ServiceProvider
 
@@ -19,5 +20,9 @@ class GcpInstanceHandle(val instanceId: String, val region: String) : InstanceHa
 
     override fun acceptWaitForState(provider: ServiceProvider, state: InstanceState, timeout: Int): Boolean {
         return provider.waitForState(this, state, timeout)
+    }
+
+    override fun acceptGetInstance(provider: ServiceProvider): InstanceInfo {
+        return provider.getInstance(this)
     }
 }

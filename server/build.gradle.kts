@@ -30,11 +30,15 @@ dependencies {
     implementation("software.amazon.awssdk:ec2")
     implementation("software.amazon.awssdk:sts")
     implementation("com.google.apis:google-api-services-compute:v1-rev232-1.25.0")
+    implementation("org.springframework.cloud:spring-cloud-starter-netflix-zuul")
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
-    testImplementation("com.jayway.jsonpath:json-path")
+        testImplementation("com.jayway.jsonpath:json-path")
     }
     testImplementation("de.flapdoodle.embed:de.flapdoodle.embed.mongo")
+    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
+    testImplementation("com.github.fakemongo:fongo:2.1.0")
 }
 
 dependencyManagement {

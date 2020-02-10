@@ -94,6 +94,7 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
                             name,
                             instance.instanceType().toString(),
                             getInstanceState(instance.state().code()),
+                            AwsInstanceHandle(instance.instanceId(), region.toString()),
                             instance.publicDnsName()
                     ))
                 }
@@ -192,6 +193,7 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
                     name,
                     instance.instanceType().toString(),
                     getInstanceState(instance.state().code()),
+                    handle,
                     instance.publicDnsName()
             )
         } else {

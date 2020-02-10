@@ -14,13 +14,13 @@ import com.google.api.services.compute.model.AttachedDiskInitializeParams
 import com.google.api.services.compute.model.Instance
 import com.google.api.services.compute.model.NetworkInterface
 import com.google.api.services.compute.model.ZoneList
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.time.Instant
 import java.util.Arrays
 import java.util.Collections
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 class GcpServiceProvider() {
     private val POLL_INTERVAL = 2000
@@ -41,7 +41,7 @@ class GcpServiceProvider() {
     }
 
     private fun getInstanceState(status: String): InstanceState {
-        return when(status) {
+        return when (status) {
             "PROVISIONING" -> InstanceState.PROVISIONING
             "STAGING" -> InstanceState.STAGING
             "RUNNING" -> InstanceState.RUNNING
@@ -64,7 +64,7 @@ class GcpServiceProvider() {
                 for (instance in response.items) {
                     logger.debug(
                             "Name: ${instance.name} " +
-                            "Image ID: ${instance.disks.toString()}" +
+                            "Image ID: ${instance.disks}" +
                             "Instance ID: ${instance.id}" +
                             "State: ${instance.status}"
                     )
@@ -74,6 +74,7 @@ class GcpServiceProvider() {
                             instance.name,
                             instance.machineType,
                             getInstanceState(instance.status),
+                            GcpInstanceHandle(instance.name, zone),
                             instance.networkInterfaces.get(0).network
                     ))
                 }
@@ -129,7 +130,7 @@ class GcpServiceProvider() {
             request.execute()
 
             return GcpInstanceHandle(name, zone)
-        }catch (e: Exception) {
+        } catch (e: Exception) {
             throw GcpServiceProviderException("Error creating instance")
         }
     }
@@ -176,6 +177,7 @@ class GcpServiceProvider() {
                 response.name,
                 response.machineType,
                 getInstanceState(response.status),
+                handle,
                 response.networkInterfaces.get(0).network)
         } catch (e: Exception) {
             throw GcpServiceProviderException("Error getting instance.")

@@ -9,10 +9,9 @@ import org.junit.jupiter.api.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.TestPropertySource
 
 @SpringBootTest
-@TestPropertySource(properties = arrayOf("spring.cloud.task.closecontext_enabled=false"))
+// @TestPropertySource(properties = arrayOf("spring.cloud.task.closecontext_enabled=false"))
 @Category("Integration")
 class AwsServiceProviderTests {
     private val logger: Logger = LoggerFactory.getLogger(AwsServiceProviderTests::class.java)
@@ -21,7 +20,7 @@ class AwsServiceProviderTests {
 
     @Test
     fun contextLoads() {
-        //Empty function to make sure context loads
+        // Empty function to make sure context loads
     }
 
     @Test

@@ -1,10 +1,9 @@
 package com.flitterkomskis.cloudfailover.cloudproviders
 
-data class InstanceInfo(
+class CreateInstanceRequest(
     val provider: Provider,
     val name: String,
     val type: String,
-    val state: InstanceState,
-    val handle: InstanceHandle,
-    val host: String
+    val imageId: String,
+    val region: String
 )
