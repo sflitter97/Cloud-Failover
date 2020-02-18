@@ -31,8 +31,8 @@ class ServiceProvider {
         logger.info("AWS initialized")
     }
 
-    fun initGcp() {
-        gcpProvider = GcpServiceProvider()
+    fun initGcp(projectId: String) {
+        gcpProvider = GcpServiceProvider(projectId)
         logger.info("GCP initialized")
     }
 

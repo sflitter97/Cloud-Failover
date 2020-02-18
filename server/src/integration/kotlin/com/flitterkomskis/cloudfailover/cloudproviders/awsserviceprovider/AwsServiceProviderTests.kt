@@ -58,11 +58,11 @@ class AwsServiceProviderTests {
 
         val handle = serviceProvider.createInstance(provider, name, type, imageId, region)
 
-        assertThat(serviceProvider.waitForState(handle, InstanceState.RUNNING))
+        assertThat(serviceProvider.waitForState(handle, InstanceState.RUNNING)).isTrue()
         assertThat(serviceProvider.stopInstance(handle)).isTrue()
-        assertThat(serviceProvider.waitForState(handle, InstanceState.STOPPED))
+        assertThat(serviceProvider.waitForState(handle, InstanceState.STOPPED)).isTrue()
         assertThat(serviceProvider.startInstance(handle)).isTrue()
-        assertThat(serviceProvider.waitForState(handle, InstanceState.RUNNING))
+        assertThat(serviceProvider.waitForState(handle, InstanceState.RUNNING)).isTrue()
         assertThat(serviceProvider.deleteInstance(handle)).isTrue()
     }
 }

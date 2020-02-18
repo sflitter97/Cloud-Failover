@@ -22,11 +22,14 @@ import java.util.Collections
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class GcpServiceProvider() {
+class GcpServiceProvider(val projectId: String) {
     private val POLL_INTERVAL = 2000
-    private val PROJECT_ID = "vaulted-harbor-266817"
     private val logger: Logger = LoggerFactory.getLogger(GcpServiceProvider::class.java)
-    private var computeService = createComputeService()
+    private var computeService: Compute? = null
+
+    init {
+        computeService = createComputeService()
+    }
 
     @Throws(IOException::class, GeneralSecurityException::class)
     private fun createComputeService(): Compute? {
@@ -36,7 +39,7 @@ class GcpServiceProvider() {
         if (credential.createScopedRequired())
             credential = credential.createScoped(Arrays.asList("https://www.googleapis.com/auth/cloud-platform"))
         return Compute.Builder(httpTransport, jsonFactory, credential)
-            .setApplicationName(PROJECT_ID)
+            .setApplicationName(projectId)
             .build()
     }
 
@@ -54,7 +57,7 @@ class GcpServiceProvider() {
 
     private fun getInstancesInZone(zone: String): List<InstanceInfo> {
         try {
-            val request = computeService!!.instances().list(PROJECT_ID, zone)
+            val request = computeService!!.instances().list(projectId, zone)
             val instances = mutableListOf<InstanceInfo>()
 
             do {
@@ -99,7 +102,7 @@ class GcpServiceProvider() {
     fun listInstances(): List<InstanceInfo> {
         try {
             val instances = mutableListOf<InstanceInfo>()
-            val request = computeService!!.zones().list(PROJECT_ID)
+            val request = computeService!!.zones().list(projectId)
             var response: ZoneList
             do {
                 response = request.execute()
@@ -126,7 +129,7 @@ class GcpServiceProvider() {
                 .setDisks(Collections.singletonList(disk))
                 .setNetworkInterfaces(Collections.singletonList(NetworkInterface()))
 
-            val request = computeService!!.instances().insert(PROJECT_ID, zone, requestBody)
+            val request = computeService!!.instances().insert(projectId, zone, requestBody)
             request.execute()
 
             return GcpInstanceHandle(name, zone)
@@ -137,7 +140,7 @@ class GcpServiceProvider() {
 
     fun deleteInstance(handle: GcpInstanceHandle): Boolean {
         try {
-            val request = computeService!!.instances().delete(PROJECT_ID, handle.region, handle.instanceId)
+            val request = computeService!!.instances().delete(projectId, handle.region, handle.instanceId)
             request.execute()
             return true
         } catch (e: Exception) {
@@ -148,7 +151,7 @@ class GcpServiceProvider() {
     fun startInstance(handle: GcpInstanceHandle): Boolean {
         try {
             val request: Compute.Instances.Start =
-                computeService!!.instances().start(PROJECT_ID, handle.region, handle.instanceId)
+                computeService!!.instances().start(projectId, handle.region, handle.instanceId)
             request.execute()
             return true
         } catch (e: Exception) {
@@ -159,7 +162,7 @@ class GcpServiceProvider() {
     fun stopInstance(handle: GcpInstanceHandle): Boolean {
         try {
             val request: Compute.Instances.Stop =
-                computeService!!.instances().stop(PROJECT_ID, handle.region, handle.instanceId)
+                computeService!!.instances().stop(projectId, handle.region, handle.instanceId)
             request.execute()
             return true
         } catch (e: Exception) {
@@ -170,7 +173,7 @@ class GcpServiceProvider() {
     fun getInstance(handle: GcpInstanceHandle): InstanceInfo {
         try {
             val request: Compute.Instances.Get =
-                computeService!!.instances().get(PROJECT_ID, handle.region, handle.instanceId)
+                computeService!!.instances().get(projectId, handle.region, handle.instanceId)
             val response = request.execute()
             return InstanceInfo(
                 Provider.GCP,

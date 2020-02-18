@@ -21,7 +21,7 @@ class GcpServiceProviderTests {
     @Test
     fun createListDeleteInstance() {
         val serviceProvider = ServiceProvider()
-        serviceProvider.initGcp()
+        serviceProvider.initGcp("vaulted-harbor-266817")
 
         val provider = Provider.GCP
         val name = "test-instance1"
@@ -40,7 +40,7 @@ class GcpServiceProviderTests {
     @Test
     fun stopStartInstance() {
         val serviceProvider = ServiceProvider()
-        serviceProvider.initGcp()
+        serviceProvider.initGcp("vaulted-harbor-266817")
 
         val provider = Provider.GCP
         val name = "test-instance2"
@@ -50,11 +50,11 @@ class GcpServiceProviderTests {
 
         val handle = serviceProvider.createInstance(provider, name, type, imageId, region)
 
-        Assertions.assertThat(serviceProvider.waitForState(handle, InstanceState.RUNNING))
+        Assertions.assertThat(serviceProvider.waitForState(handle, InstanceState.RUNNING)).isTrue()
         Assertions.assertThat(serviceProvider.stopInstance(handle)).isTrue()
-        Assertions.assertThat(serviceProvider.waitForState(handle, InstanceState.TERMINATED))
+        Assertions.assertThat(serviceProvider.waitForState(handle, InstanceState.TERMINATED)).isTrue()
         Assertions.assertThat(serviceProvider.startInstance(handle)).isTrue()
-        Assertions.assertThat(serviceProvider.waitForState(handle, InstanceState.RUNNING))
+        Assertions.assertThat(serviceProvider.waitForState(handle, InstanceState.RUNNING)).isTrue()
         Assertions.assertThat(serviceProvider.deleteInstance(handle)).isTrue()
     }
 }

@@ -50,11 +50,11 @@ class AzureServiceProviderTests {
 
         val handle = serviceProvider.createInstance(provider, name, type, imageId, region)
 
-        Assertions.assertThat(serviceProvider.waitForState(handle, InstanceState.RUNNING))
+        Assertions.assertThat(serviceProvider.waitForState(handle, InstanceState.RUNNING)).isTrue()
         Assertions.assertThat(serviceProvider.stopInstance(handle)).isTrue()
-        Assertions.assertThat(serviceProvider.waitForState(handle, InstanceState.TERMINATED))
+        Assertions.assertThat(serviceProvider.waitForState(handle, InstanceState.DEALLOCATED)).isTrue()
         Assertions.assertThat(serviceProvider.startInstance(handle)).isTrue()
-        Assertions.assertThat(serviceProvider.waitForState(handle, InstanceState.RUNNING))
+        Assertions.assertThat(serviceProvider.waitForState(handle, InstanceState.RUNNING)).isTrue()
         Assertions.assertThat(serviceProvider.deleteInstance(handle)).isTrue()
     }
 }
