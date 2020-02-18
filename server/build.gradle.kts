@@ -31,6 +31,9 @@ dependencies {
     implementation("software.amazon.awssdk:sts")
     implementation("com.google.apis:google-api-services-compute:v1-rev232-1.25.0")
     implementation("org.springframework.cloud:spring-cloud-starter-netflix-zuul")
+    implementation("com.microsoft.azure:azure:1.30.0")
+    implementation("com.microsoft.azure:azure-mgmt-compute:1.30.0")
+    implementation("com.microsoft.azure:azure-mgmt-resources:1.30.0")
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
         testImplementation("com.jayway.jsonpath:json-path")
