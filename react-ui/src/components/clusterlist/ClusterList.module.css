@@ -1,0 +1,9 @@
+.clusterList {
+    width: 90vw;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.table {
+    table-layout: auto;
+}

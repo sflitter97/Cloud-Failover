@@ -1,6 +1,7 @@
 package com.flitterkomskis.cloudfailover.cloudproviders
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 // TODO: Figure out whether the above actions should be in cluster controller or service controller
 
 @RestController
+@CrossOrigin
 class ServiceController {
     @Autowired private lateinit var serviceProvider: ServiceProvider
 

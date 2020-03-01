@@ -1,5 +1,6 @@
 package com.flitterkomskis.cloudfailover.reverseproxy
 
+import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
 import com.flitterkomskis.cloudfailover.cloudproviders.ServiceProvider
 import com.flitterkomskis.cloudfailover.cluster.Cluster
 import com.flitterkomskis.cloudfailover.cluster.ClusterService
@@ -48,13 +49,6 @@ class DynamicRoutingService @Autowired constructor(
         zuulProperties.getRoutes().put(
             cluster.id.toString(),
             ZuulRoute(
-                cluster.id.toString(), "$ACCESS_PREFIX/${cluster.id}/",
-                null, url, true, false, HashSet()
-            )
-        )
-        zuulProperties.getRoutes().put(
-            cluster.id.toString(),
-            ZuulRoute(
                 cluster.id.toString(), "$ACCESS_PREFIX/${cluster.id}/**",
                 null, url, true, false, HashSet()
             )
@@ -63,7 +57,13 @@ class DynamicRoutingService @Autowired constructor(
 
     private fun createTargetURL(cluster: Cluster): String {
         val accessInstance = cluster.accessInstance ?: throw DynamicRoutingServiceException("Cluster has no access instance defined.")
+        val instanceInfo = serviceProvider.getInstance(accessInstance)
+        if(instanceInfo.state != InstanceState.RUNNING) {
+            logger.error("Instance with handle ${accessInstance.toString()} is not running.")
+        }
         val host = serviceProvider.getInstance(accessInstance).host
-        return "${HTTP_PROTOCOL}$host:${cluster.targetPort}${cluster.targetPath}"
+        val targetUrl = "${HTTP_PROTOCOL}$host:${cluster.targetPort}${cluster.targetPath}"
+        logger.info("Target URL for cluster ${cluster.toString()} is $targetUrl")
+        return targetUrl
     }
 }
