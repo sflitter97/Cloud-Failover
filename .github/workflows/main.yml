@@ -26,4 +26,5 @@ jobs:
         with:
           arguments: build
           build-root-directory: server
+          wrapper-directory: server
       
