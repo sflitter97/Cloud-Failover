@@ -39,10 +39,11 @@ dependencies {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
         testImplementation("com.jayway.jsonpath:json-path")
     }
-    testImplementation("de.flapdoodle.embed:de.flapdoodle.embed.mongo")
+    //testImplementation("de.flapdoodle.embed:de.flapdoodle.embed.mongo")
+    testImplementation("de.bwaldvogel:mongo-java-server:1.24.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
-    testImplementation("com.github.fakemongo:fongo:2.1.0")
+    //testImplementation("com.github.fakemongo:fongo:2.1.0")
 }
 
 dependencyManagement {
@@ -75,11 +76,19 @@ sourceSets {
     }
 }
 
-task<Test>("integrationTest") {
-    description = "Runs the integration tests"
-    group = "verification"
-    testClassesDirs = sourceSets["integrationTest"].output.classesDirs
-    classpath = sourceSets["integrationTest"].runtimeClasspath
-    mustRunAfter(tasks["test"])
-    useJUnitPlatform()
+tasks {
+    register<Test>("integrationTest") {
+        description = "Runs the integration tests"
+        group = "verification"
+        testClassesDirs = sourceSets["integrationTest"].output.classesDirs
+        classpath = sourceSets["integrationTest"].runtimeClasspath
+        mustRunAfter("test")
+        useJUnitPlatform()
+    }
+    build {
+        dependsOn.add("integrationTest")
+    }
+    register("dev") {
+        dependsOn("bootRun")
+    }
 }

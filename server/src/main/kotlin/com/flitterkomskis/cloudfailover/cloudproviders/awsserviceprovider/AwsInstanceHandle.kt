@@ -6,6 +6,7 @@ import com.flitterkomskis.cloudfailover.cloudproviders.InstanceInfo
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
 import com.flitterkomskis.cloudfailover.cloudproviders.ServiceProvider
 import org.springframework.data.annotation.TypeAlias
+
 @TypeAlias("AwsInstanceHandle")
 @JsonTypeName("AwsInstanceHandle")
 data class AwsInstanceHandle(val instanceId: String, val region: String) : InstanceHandle {

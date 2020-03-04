@@ -1,21 +1,17 @@
 package com.flitterkomskis.cloudfailover.cluster
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceHandle
 import java.util.UUID
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.TypeAlias
-import org.springframework.hateoas.RepresentationModel
 
 @TypeAlias("cluster")
-open class Cluster(var name: String): RepresentationModel<Cluster>() {
+open class Cluster(var name: String) {
 
     @Id var id = UUID.randomUUID()
 
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     var instances: MutableList<InstanceHandle> = mutableListOf()
 
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     var accessInstance: InstanceHandle? = null
         set(handle) {
         if (!instances.contains(handle)) {

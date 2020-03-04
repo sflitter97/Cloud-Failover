@@ -18,11 +18,10 @@ interface ClusterService {
     fun deleteCluster(id: UUID): Boolean
 }
 
-@Service("clusterService")
+@Service
 class ClusterServiceImpl : ClusterService {
     private val logger: Logger = LoggerFactory.getLogger(ClusterServiceImpl::class.java)
-    @Autowired
-    lateinit var clusterRepository: ClusterRepository
+    @Autowired lateinit var clusterRepository: ClusterRepository
 
     override fun listClusters(): List<Cluster> {
         return clusterRepository.findAll()

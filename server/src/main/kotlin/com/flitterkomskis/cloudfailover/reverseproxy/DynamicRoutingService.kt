@@ -58,12 +58,12 @@ class DynamicRoutingService @Autowired constructor(
     private fun createTargetURL(cluster: Cluster): String {
         val accessInstance = cluster.accessInstance ?: throw DynamicRoutingServiceException("Cluster has no access instance defined.")
         val instanceInfo = serviceProvider.getInstance(accessInstance)
-        if(instanceInfo.state != InstanceState.RUNNING) {
-            logger.error("Instance with handle ${accessInstance.toString()} is not running.")
+        if (instanceInfo.state != InstanceState.RUNNING) {
+            logger.error("Instance with handle $accessInstance is not running.")
         }
         val host = serviceProvider.getInstance(accessInstance).host
         val targetUrl = "${HTTP_PROTOCOL}$host:${cluster.targetPort}${cluster.targetPath}"
-        logger.info("Target URL for cluster ${cluster.toString()} is $targetUrl")
+        logger.info("Target URL for cluster $cluster is $targetUrl")
         return targetUrl
     }
 }

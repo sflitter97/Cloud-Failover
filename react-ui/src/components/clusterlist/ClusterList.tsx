@@ -5,6 +5,8 @@ import Cluster from '../../interfaces/Cluster';
 import ClusterUpdateDto from '../../interfaces/ClusterUpdateDto';
 import { ClusterModal } from '../clustermodal/ClusterModal';
 import { API_METHODS as API } from '../../api_methods';
+import 'react-bootstrap-table-next/dist/react-bootstrap-table2.min.css';
+import BootstrapTable from 'react-bootstrap-table-next';
 
 export interface ClusterListProps {
 }
@@ -12,39 +14,46 @@ export interface ClusterListProps {
 interface ClusterListState {
   clusters: Array<Cluster>;
   selectedCluster: number;
-  formCluster: Cluster;
   showModal: boolean;
 }
 
 export class ClusterList extends React.Component<ClusterListProps, ClusterListState> {
+  constructor(props: ClusterListProps) {
+    super(props);
+    this.state = {
+      clusters: Array<Cluster>(),
+      selectedCluster: 0,
+      showModal: false
+
+    };
+  }
+
   componentDidMount() {
+    // fetch cluster list
     fetch(API.BASE + API.CLUSTERS)
     .then(res => res.json())
+    // fetch details of each cluster individually
     .then(data => {
       return data._embedded.clusters.map((cluster: { _links: { self: { href: RequestInfo; }; }; }) =>
 				fetch(cluster._links.self.href)
 		  );
     })
+    // gather the individual response promises into one
+    .then(clusterPromises => Promise.all<Response>(clusterPromises))
+    // convert each to json
     .then(clusterPromises => {
-      return Promise.all<Response>(clusterPromises)
+      return clusterPromises.map((value) => value.json())
     })
-    .then(clusterPromises => {
-      return clusterPromises.map<Cluster>((value: any) => {
-        console.log(value)
-        return value.res()
-      });
+    // gather the individual json promises into one
+    .then(clusterJsonPromises => Promise.all<Cluster>(clusterJsonPromises))
+    .then(clusterJson => {
+      this.setState({
+        clusters: clusterJson,
+        selectedCluster: 0,
+        showModal: false
+      })
     })
-    // .then(data => console.log(data));
-    // .then(data => {
-    //   this.setState({
-    //     clusters: data,
-    //     selectedCluster: 0,
-    //     formCluster: data[0],
-    //     showModal: false
-    //   })
-    //   console.log(data)
-    // })
-    // .catch(console.log);
+    .catch(console.log);
   }
 
   handleRowClick(idx: number) {
@@ -52,7 +61,6 @@ export class ClusterList extends React.Component<ClusterListProps, ClusterListSt
     if(idx >= 0 && idx < this.state.clusters.length) {
       this.setState({
         selectedCluster: idx,
-        formCluster: this.state.clusters[idx],
         showModal: true
       });
     }
@@ -101,37 +109,72 @@ export class ClusterList extends React.Component<ClusterListProps, ClusterListSt
   }
 
   render() {
+    const columns = [
+      {
+        dataField: 'id',
+        hidden: true
+      },
+      {
+        dataField: 'name',
+        text: 'Name',
+        sort: true
+      },
+      {
+        dataField: 'targetPort',
+        text: 'Target Port',
+        type: "number"
+      },
+      {
+        dataField: 'targetPath',
+        text: 'Target Path'
+      },
+      {
+        dataField: 'instances',
+        text: 'Instances',
+        type: "number"
+      },
+      {
+        dataField: 'access',
+        text: 'Access',
+        formatter: (cell: string, row: any, rowIndex: number, formatExtraData: any) => {
+          return <a href={cell} rel="noopener noreferrer" target="_blank">{cell}</a>;
+        }
+      }
+    ]
+    const selectRow = {
+      mode: 'checkbox',
+      onSelect: (row: any, isSelect: any, rowIndex: any, e: any) => {
+        if(e.target.tagName === 'A') {
+          return false;
+        }
+        console.log(row)
+      },
+      clickToSelect: true,
+      hideSelectColumn: true
+    };
     return (
       <div className={styles.clusterList}>
           <h2>Clusters</h2>
-          <Table striped hover className={styles.table}>
-            <thead>
-              <tr>
-                <th>UUID</th>
-                <th>Name</th>
-                <th>Port</th>
-                <th>Path</th>
-                <th>Instances</th>
-                <th>Access URL</th>
-              </tr>
-            </thead>
-            <tbody>
-              {this.state !== null && this.state.clusters.map((value, index) => {
-                return <tr key={value.id} onClick={() => this.handleRowClick(index)}>
-                  <td>{value.id}</td>
-                  <td>{value.name}</td>
-                  <td>{value.targetPort}</td>
-                  <td>{value.targetPath}</td>
-                  <td>{value.instances.length}</td>
-                  <td><a href={API.BASE + API.ACCESS + "/" + value.id + "/"} rel="noopener noreferrer" target="_blank">
-                    {API.BASE + API.ACCESS + "/" + value.id + "/"}
-                  </a></td>
-                </tr>
-              })}
-            </tbody>
-        </Table>
-        {this.state !== null && this.state.showModal && <ClusterModal
-          cluster={this.state.formCluster}
+          <BootstrapTable 
+            keyField='name'
+            data={this.state.clusters.map(cluster => {
+              console.log(cluster);
+              return {
+                id: cluster.id,
+                name: cluster.name,
+                targetPort: cluster.targetPort,
+                targetPath: cluster.targetPath,
+                instances: cluster.instances.length,
+                access: cluster._links.access.href
+              }
+            })} 
+            columns={columns}
+            bootstrap4={true}
+            bordered={false}
+            hover={true}
+            selectRow={selectRow}/>
+        {this.state.showModal && <ClusterModal
+          cluster={this.state.clusters[this.state.selectedCluster]}
           accessApi={API.BASE + API.ACCESS}
           show={true}
           handleClose={this.handleModalClose}

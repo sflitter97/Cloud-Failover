@@ -1,25 +1,27 @@
 package com.flitterkomskis.cloudfailover.cluster
 
-import com.github.fakemongo.junit.FongoRule
 import com.mongodb.internal.connection.tlschannel.util.Util.assertTrue
 import java.util.UUID
 import jdk.jfr.Category
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Rule
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
+import org.junit.runner.RunWith
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.junit4.SpringRunner
 
+@RunWith(SpringRunner::class)
 @SpringBootTest
 @Category("Unit")
+@ActiveProfiles("test")
 class ClusterServiceTests {
     private val logger: Logger = LoggerFactory.getLogger(ClusterServiceTests::class.java)
-    @get:Rule val fongoRule = FongoRule()
     @Autowired private lateinit var clusterService: ClusterService
 
     @Test

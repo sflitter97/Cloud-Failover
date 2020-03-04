@@ -1,4 +1,5 @@
 export type Cluster = {
+  _links: { [key: string]: {'href': string}}
   id: string;
   name: string;
   instances: Array<any>;

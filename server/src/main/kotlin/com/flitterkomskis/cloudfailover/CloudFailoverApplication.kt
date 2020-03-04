@@ -13,9 +13,6 @@ import org.springframework.web.filter.CorsFilter
 @EnableZuulProxy
 @SpringBootApplication
 class CloudFailoverApplication {
-    @Autowired
-    private lateinit var serviceProvider: ServiceProvider
-
     @Bean
     fun corsFilter(): CorsFilter? {
         val source = UrlBasedCorsConfigurationSource()

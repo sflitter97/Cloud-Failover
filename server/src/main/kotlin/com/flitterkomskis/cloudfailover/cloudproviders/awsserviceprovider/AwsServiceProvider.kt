@@ -171,7 +171,7 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
     }
 
     fun getInstance(handle: AwsInstanceHandle): InstanceInfo {
-        logger.info("Getting instance for handle ${handle.toString()}")
+        logger.info("Getting instance for handle $handle")
         val client = getClient(handle.region)
         val getRequest: DescribeInstancesRequest = DescribeInstancesRequest.builder().instanceIds(handle.instanceId).build()
         val getResponse: DescribeInstancesResponse = client.describeInstances(getRequest)
@@ -197,7 +197,7 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
                     handle,
                     instance.publicDnsName()
             )
-            logger.info("Instance info for handle ${handle.toString()} is ${info.toString()}")
+            logger.info("Instance info for handle $handle is $info")
             return info
         } else {
             throw AwsServiceProviderException("Instance with ID ${handle.instanceId} not found.")
