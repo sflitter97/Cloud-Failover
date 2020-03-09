@@ -1,24 +1,26 @@
 package com.flitterkomskis.cloudfailover.cloudproviders
 
-import com.flitterkomskis.cloudfailover.cluster.Cluster
-import com.flitterkomskis.cloudfailover.cluster.ClusterController
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.hateoas.EntityModel
-import org.springframework.hateoas.Link
 import org.springframework.hateoas.server.RepresentationModelAssembler
-import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn
 import org.springframework.stereotype.Component
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder
 
 @Component
 class InstanceModelAssembler : RepresentationModelAssembler<InstanceInfo, EntityModel<InstanceInfo>> {
     private val logger: Logger = LoggerFactory.getLogger(InstanceModelAssembler::class.java)
+    private val mapper = jacksonObjectMapper()
+
     override fun toModel(entity: InstanceInfo): EntityModel<InstanceInfo> {
-        logger.info(ServletUriComponentsBuilder.fromCurrentRequest().build().toString())
-        val host = ServletUriComponentsBuilder.fromCurrentRequestUri().replacePath(null)
-        return EntityModel(entity//,
-            //WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(ServiceController::class.java).getInstance(entity.handle)).withSelfRel()
+        val handleStr = mapper.writeValueAsString(entity.handle)
+        return EntityModel(entity,
+            linkTo(methodOn(ServiceController::class.java).getInstance(handleStr)).withSelfRel(),
+            linkTo(methodOn(ServiceController::class.java).deleteInstance(handleStr)).withRel("delete"),
+            linkTo(methodOn(ServiceController::class.java).startInstance(handleStr)).withRel("start"),
+            linkTo(methodOn(ServiceController::class.java).stopInstance(handleStr)).withRel("stop")
         )
     }
 }

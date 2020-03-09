@@ -1,1 +1,1 @@
-rootProject.name = "cloud-failover"
+rootProject.name = "server"

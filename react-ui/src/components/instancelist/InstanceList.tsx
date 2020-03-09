@@ -4,8 +4,13 @@ import Instance from '../../interfaces/Instance';
 import { API_METHODS as API } from '../../api_methods';
 import 'react-bootstrap-table-next/dist/react-bootstrap-table2.min.css';
 import BootstrapTable from 'react-bootstrap-table-next';
+import InstanceState from '../../interfaces/InstanceState';
+import { Loading } from '../loading/Loading';
 
 export interface InstanceListProps {
+  onRowClick?: (row: any, isSelect: any) => void
+  selected?: Array<{}>
+  updateInstanceInfos?: (instanceInfos: Array<Instance>) => void
 }
 
 interface InstanceListState {
@@ -36,33 +41,35 @@ export class InstanceList extends React.Component<InstanceListProps, InstanceLis
     .then(instancePromises => {
       return instancePromises.map((value) => value.json())
     })
-    // gather the individual json promises into one
-    .then(instanceJsonPromises => Promise.all<Instance>(instanceJsonPromises))
-    .then(instanceJson => {
-      this.setState({
-        instances: instanceJson
+    .then(instanceJsonPromises => Promise.all<{state: string}>(instanceJsonPromises))
+    .then(instanceJsonPromises => {
+      return instanceJsonPromises.map((value) => {
+        return {...value, state: InstanceState.getState(value.state)}
       })
     })
-    .catch(console.log);
-  }
-
-  handleRowClick(idx: number) {
-    console.log(idx);
-    if(idx >= 0 && idx < this.state.instances.length) {
+    // gather the individual json promises into one
+    .then(instanceJsonPromises => Promise.all<Instance>(instanceJsonPromises as any))
+    .then(instanceJson => {
+      // instanceJson.forEach(value => {
+      //   value.state = InstanceState.getState(value.state)
+      // });
       this.setState({
+        instances: instanceJson
       });
-    }
-  }
-
-  handleModalClose = () => {
-    this.setState({
-    });
+      if(this.props.updateInstanceInfos !== undefined)
+        this.props.updateInstanceInfos(this.state.instances);
+    })
+    .catch(console.log);
   }
 
   render() {
     const columns = [
       {
-        dataField: 'handle',
+        dataField: 'instance',
+        hidden: true,
+      },
+      {
+        dataField: 'handleStr',
         hidden: true
       },
       {
@@ -87,34 +94,41 @@ export class InstanceList extends React.Component<InstanceListProps, InstanceLis
         dataField: 'host',
         text: 'Host',
         formatter: (cell: string, row: any, rowIndex: number, formatExtraData: any) => {
-          return <a href={cell} rel="noopener noreferrer" target="_blank">{cell}</a>;
+          return <a href={'//' + cell} rel="noopener noreferrer" target="_blank">{cell}</a>;
         }
       }
     ]
     const selectRow = {
       mode: 'checkbox',
-      onSelect: (row: any, isSelect: any, rowIndex: any, e: any) => {
+      onSelect: (row: any, isSelect: boolean, rowIndex: any, e: any) => {
         if(e.target.tagName === 'A') {
           return false;
         }
-        console.log(row)
+        console.log(row);
+        console.log(isSelect);
+        if(this.props.onRowClick !== undefined) {
+          this.props.onRowClick(row, isSelect);
+        }
       },
       clickToSelect: true,
-      hideSelectColumn: true
+      hideSelectColumn: true,
+      selected: this.props.selected?.map(sValue => JSON.stringify(sValue)),
+      classes: "table-primary",
+      nonSelectableClasses: "table-dark"
     };
     return (
-      <div className={styles.InstanceList}>
+      <div className={styles.instanceList}>
           <h2>Instances</h2>
           <BootstrapTable 
-            keyField='name'
+            keyField='handleStr'
             data={this.state.instances.map(instance => {
-              console.log(instance);
               return {
-                handle: instance.handle,
+                instance: instance,
+                handleStr: JSON.stringify(instance.handle),
                 provider: instance.provider,
                 name: instance.name,
                 type: instance.type,
-                state: instance.state,
+                state: instance.state.toString(),
                 host: instance.host
               }
             })} 
@@ -122,7 +136,9 @@ export class InstanceList extends React.Component<InstanceListProps, InstanceLis
             bootstrap4={true}
             bordered={false}
             hover={true}
-            selectRow={selectRow}/>
+            selectRow={selectRow}
+            noDataIndication={ () => <div className="centerContents"><Loading iconSize="3x" fontSize="2rem" /></div> }
+            />
       </div>
     );
   }

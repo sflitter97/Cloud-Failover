@@ -1,40 +1,41 @@
 import React from 'react';
-import Table from 'react-bootstrap/Table';
+import { RouteComponentProps, withRouter, Link } from 'react-router-dom';
 import styles from './ClusterList.module.css';
 import Cluster from '../../interfaces/Cluster';
-import ClusterUpdateDto from '../../interfaces/ClusterUpdateDto';
-import { ClusterModal } from '../clustermodal/ClusterModal';
 import { API_METHODS as API } from '../../api_methods';
 import 'react-bootstrap-table-next/dist/react-bootstrap-table2.min.css';
 import BootstrapTable from 'react-bootstrap-table-next';
+import { Loading } from '../loading/Loading'
+import Row from 'react-bootstrap/Row';
+import Button from 'react-bootstrap/Button';
 
-export interface ClusterListProps {
+export interface ClusterListProps extends RouteComponentProps {
+  clusters: Array<Cluster>;
+  handleUpdateClusters: (c: Array<Cluster>) => void;
 }
 
 interface ClusterListState {
-  clusters: Array<Cluster>;
   selectedCluster: number;
   showModal: boolean;
 }
 
-export class ClusterList extends React.Component<ClusterListProps, ClusterListState> {
+class ClusterList extends React.Component<ClusterListProps, ClusterListState> {
   constructor(props: ClusterListProps) {
     super(props);
     this.state = {
-      clusters: Array<Cluster>(),
       selectedCluster: 0,
       showModal: false
 
     };
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     // fetch cluster list
     fetch(API.BASE + API.CLUSTERS)
     .then(res => res.json())
     // fetch details of each cluster individually
     .then(data => {
-      return data._embedded.clusters.map((cluster: { _links: { self: { href: RequestInfo; }; }; }) =>
+      return data._embedded.clusters.map((cluster: Cluster) =>
 				fetch(cluster._links.self.href)
 		  );
     })
@@ -47,8 +48,8 @@ export class ClusterList extends React.Component<ClusterListProps, ClusterListSt
     // gather the individual json promises into one
     .then(clusterJsonPromises => Promise.all<Cluster>(clusterJsonPromises))
     .then(clusterJson => {
+      this.props.handleUpdateClusters(clusterJson);
       this.setState({
-        clusters: clusterJson,
         selectedCluster: 0,
         showModal: false
       })
@@ -58,54 +59,12 @@ export class ClusterList extends React.Component<ClusterListProps, ClusterListSt
 
   handleRowClick(idx: number) {
     console.log(idx);
-    if(idx >= 0 && idx < this.state.clusters.length) {
+    if(idx >= 0 && idx < this.props.clusters.length) {
       this.setState({
         selectedCluster: idx,
         showModal: true
       });
     }
-  }
-
-  handleModalClose = () => {
-    this.setState({
-      showModal: false
-    });
-  }
-
-  handleModalFormSubmit = (cluster: ClusterUpdateDto) => {
-    console.log(JSON.stringify(cluster))
-    fetch(API.BASE + API.CLUSTERS + "/" + this.state.clusters[this.state.selectedCluster].id, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(cluster)
-    })
-      .then(res => res.json())
-      .then(res => console.log(res))
-    this.setState(state => {
-      const clusters = state.clusters.map((value, index) => {
-        if(index === state.selectedCluster) {
-          let new_cluster = value;
-          if(cluster.name !== undefined) {
-            value.name = cluster.name;
-          }
-          if(cluster.instances !== undefined) {
-            value.instances = cluster.instances;
-          }
-          if(cluster.targetPort !== undefined) {
-            value.targetPort = cluster.targetPort;
-          }
-          if(cluster.targetPath !== undefined) {
-            value.targetPath = cluster.targetPath;
-          }
-          return new_cluster;
-        } else {
-          return value;
-        }
-      });
-
-      return {clusters};
-    });
-    console.log(cluster);
   }
 
   render() {
@@ -147,6 +106,7 @@ export class ClusterList extends React.Component<ClusterListProps, ClusterListSt
         if(e.target.tagName === 'A') {
           return false;
         }
+        this.props.history.push(`/clusters/${row.id}`)
         console.log(row)
       },
       clickToSelect: true,
@@ -154,10 +114,13 @@ export class ClusterList extends React.Component<ClusterListProps, ClusterListSt
     };
     return (
       <div className={styles.clusterList}>
-          <h2>Clusters</h2>
+          <Row>
+            <h2>Clusters</h2>
+            <Link to="/clusters/new" className={styles.createButton}><Button>Create Cluster</Button></Link>
+          </Row>
           <BootstrapTable 
             keyField='name'
-            data={this.state.clusters.map(cluster => {
+            data={this.props.clusters.map(cluster => {
               console.log(cluster);
               return {
                 id: cluster.id,
@@ -172,15 +135,12 @@ export class ClusterList extends React.Component<ClusterListProps, ClusterListSt
             bootstrap4={true}
             bordered={false}
             hover={true}
-            selectRow={selectRow}/>
-        {this.state.showModal && <ClusterModal
-          cluster={this.state.clusters[this.state.selectedCluster]}
-          accessApi={API.BASE + API.ACCESS}
-          show={true}
-          handleClose={this.handleModalClose}
-          handleFormSubmit={this.handleModalFormSubmit} />
-        }
+            selectRow={selectRow}
+            noDataIndication={ () => <div className="centerContents"><Loading iconSize="3x" fontSize="2rem" /></div> }
+            />
       </div>
     );
   }
 }
+
+export default withRouter(ClusterList)

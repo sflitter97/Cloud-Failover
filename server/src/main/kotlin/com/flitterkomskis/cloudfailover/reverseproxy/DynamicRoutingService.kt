@@ -22,7 +22,7 @@ class DynamicRoutingService @Autowired constructor(
 ) {
     private val logger: Logger = LoggerFactory.getLogger(DynamicRoutingService::class.java)
     private val HTTP_PROTOCOL = "http://"
-    private val ACCESS_PREFIX = "/access"
+    private val ACCESS_PREFIX = "/api/access"
     @Autowired private lateinit var serviceProvider: ServiceProvider
 
     @PostConstruct
@@ -59,7 +59,7 @@ class DynamicRoutingService @Autowired constructor(
         val accessInstance = cluster.accessInstance ?: throw DynamicRoutingServiceException("Cluster has no access instance defined.")
         val instanceInfo = serviceProvider.getInstance(accessInstance)
         if (instanceInfo.state != InstanceState.RUNNING) {
-            logger.error("Instance with handle $accessInstance is not running.")
+            throw IllegalStateException("Cannot change access instance for cluster ${cluster.id}. Instance with handle $accessInstance is not running.")
         }
         val host = serviceProvider.getInstance(accessInstance).host
         val targetUrl = "${HTTP_PROTOCOL}$host:${cluster.targetPort}${cluster.targetPath}"

@@ -8,9 +8,9 @@ import com.flitterkomskis.cloudfailover.cloudproviders.gcpserviceprovider.GcpIns
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "handleType")
 @JsonSubTypes(
-    JsonSubTypes.Type(name="AwsInstanceHandle", value=AwsInstanceHandle::class),
-    JsonSubTypes.Type(name="GcpInstanceHandle", value=GcpInstanceHandle::class),
-    JsonSubTypes.Type(name="AzureInstanceHandle", value= AzureInstanceHandle::class)
+    JsonSubTypes.Type(name = "AwsInstanceHandle", value = AwsInstanceHandle::class),
+    JsonSubTypes.Type(name = "GcpInstanceHandle", value = GcpInstanceHandle::class),
+    JsonSubTypes.Type(name = "AzureInstanceHandle", value = AzureInstanceHandle::class)
 )
 interface InstanceHandle {
     fun acceptDeleteInstance(provider: ServiceProvider): Boolean

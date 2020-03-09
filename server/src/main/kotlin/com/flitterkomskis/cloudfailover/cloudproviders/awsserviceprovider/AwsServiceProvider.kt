@@ -5,6 +5,10 @@ import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
 import com.flitterkomskis.cloudfailover.cloudproviders.Provider
 import java.lang.Thread.sleep
 import java.time.Instant
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
@@ -66,41 +70,52 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
     }
 
     fun listInstances(): List<InstanceInfo> {
-        val instances = mutableListOf<InstanceInfo>()
-        for (region in getRegions()) {
-            val client = getClient(region)
+        // val instances = mutableListOf<InstanceInfo>()
 
-            var nextToken: String?
-            val reservations = mutableListOf<Reservation>()
-            do {
-                val listRequest: DescribeInstancesRequest = DescribeInstancesRequest.builder().maxResults(MAX_RESULTS_ALLOWED).build()
-                val listResponse: DescribeInstancesResponse = client.describeInstances(listRequest)
+        var ret = listOf<InstanceInfo>()
+        val promises = getRegions().map { region ->
+            GlobalScope.async {
+                logger.info("Getting instances from AWS $region")
+                val instances = mutableListOf<InstanceInfo>()
+                val client = getClient(region)
 
-                reservations.addAll(listResponse.reservations())
+                var nextToken: String?
+                val reservations = mutableListOf<Reservation>()
+                do {
+                    val listRequest: DescribeInstancesRequest = DescribeInstancesRequest.builder().maxResults(MAX_RESULTS_ALLOWED).build()
+                    val listResponse: DescribeInstancesResponse = client.describeInstances(listRequest)
 
-                nextToken = listResponse.nextToken()
-            } while (nextToken != null)
+                    reservations.addAll(listResponse.reservations())
 
-            for (reservation in reservations) {
-                for (instance in reservation.instances()) {
-                    val name = instance.tags().stream().filter { pair ->
-                        pair.key() == "Name"
-                    }.findFirst()
+                    nextToken = listResponse.nextToken()
+                } while (nextToken != null)
+
+                for (reservation in reservations) {
+                    for (instance in reservation.instances()) {
+                        val name = instance.tags().stream().filter { pair ->
+                            pair.key() == "Name"
+                        }.findFirst()
                             .orElse(Tag.builder().key("Name").value("No name").build())
                             .value()
-                    logger.debug("Name: $name Image ID: ${instance.imageId()} Instance ID: ${instance.instanceId()} State: ${instance.state().name()}")
-                    instances.add(InstanceInfo(
+                        logger.debug("Name: $name Image ID: ${instance.imageId()} Instance ID: ${instance.instanceId()} State: ${instance.state().name()}")
+                        instances.add(InstanceInfo(
                             Provider.AWS,
                             name,
                             instance.instanceType().toString(),
                             getInstanceState(instance.state().code()),
                             AwsInstanceHandle(instance.instanceId(), region.toString()),
                             instance.publicDnsName()
-                    ))
+                        ))
+                    }
                 }
+                logger.info("Got ${instances.size} instances from AWS $region")
+                instances
             }
         }
-        return instances
+        runBlocking {
+            ret = promises.awaitAll().flatten()
+        }
+        return ret
     }
 
     fun createInstance(name: String, type: String, imageId: String, region: String): AwsInstanceHandle {

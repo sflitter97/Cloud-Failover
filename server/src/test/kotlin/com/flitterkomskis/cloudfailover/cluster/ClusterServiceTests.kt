@@ -33,7 +33,7 @@ class ClusterServiceTests {
     fun listClusters() {
         val clusterName = "Test cluster 1"
         assertThat(clusterService.listClusters().isEmpty())
-        clusterService.createCluster(clusterName)
+        clusterService.createCluster(mapOf("name" to clusterName))
         assertThat(clusterService.listClusters().size).isEqualTo(1)
         assertThat(clusterService.listClusters()[0].name).isEqualTo(clusterName)
     }
@@ -45,27 +45,27 @@ class ClusterServiceTests {
         assertThrows<NoSuchElementException> {
             clusterService.getCluster(id)
         }
-        val cluster = clusterService.createCluster(clusterName)
+        val cluster = clusterService.createCluster(mapOf("name" to clusterName))
         assertThat(clusterService.getCluster(cluster.id).name).isEqualTo(clusterName)
     }
 
     @Test
     fun updateCluster() {
         var clusterName = "Test cluster 1"
-        val port = 80
+        val port = "80"
         val path = "/"
-        var cluster = clusterService.createCluster(clusterName)
+        var cluster = clusterService.createCluster(mapOf("name" to clusterName))
         clusterName = "Test cluster 2"
         cluster = clusterService.updateCluster(cluster.id, mapOf<String, Any>("name" to clusterName, "targetPort" to port, "targetPath" to path))
         assertThat(clusterService.getCluster(cluster.id).name).isEqualTo(clusterName)
-        assertThat(clusterService.getCluster(cluster.id).targetPort).isEqualTo(port)
+        assertThat(clusterService.getCluster(cluster.id).targetPort.toString()).isEqualTo(port)
         assertThat(clusterService.getCluster(cluster.id).targetPath).isEqualTo(path)
     }
 
     @Test
     fun deleteCluster() {
         val clusterName = "Test cluster 1"
-        val cluster = clusterService.createCluster(clusterName)
+        val cluster = clusterService.createCluster(mapOf("name" to clusterName))
         assertDoesNotThrow { clusterService.getCluster(cluster.id) }
         assertTrue(clusterService.deleteCluster(cluster.id))
         assertFalse(clusterService.deleteCluster(cluster.id))

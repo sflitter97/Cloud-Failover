@@ -19,7 +19,8 @@ class ClusterModelAssembler : RepresentationModelAssembler<Cluster, EntityModel<
         return EntityModel(entity,
             linkTo(methodOn(ClusterController::class.java).getCluster(entity.id)).withSelfRel(),
             linkTo(ClusterController::class.java).slash(entity.id).slash("instances").withRel("instances"),
-            Link(host.path("/access/${entity.id}").build().toUriString(), "access")
+            Link(host.path("/api/access/${entity.id}").build().toUriString(), "access"),
+            linkTo(methodOn(TrafficController::class.java).getCurrentCloudProvider(entity.id)).withRel("traffic")
         )
     }
 }

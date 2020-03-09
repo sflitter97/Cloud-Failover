@@ -1,6 +1,5 @@
 package com.flitterkomskis.cloudfailover.cloudproviders
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -16,8 +15,8 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.util.Base64
 
 // TODO: Attach VM instance to cluster
 // TODO: Get all VMs in cluster
@@ -25,40 +24,56 @@ import java.util.Base64
 
 @RestController
 @CrossOrigin
+@RequestMapping("/api/instances")
 class ServiceController {
     private val logger: Logger = LoggerFactory.getLogger(ServiceController::class.java)
     @Autowired private lateinit var serviceProvider: ServiceProvider
     @Autowired private lateinit var assembler: InstanceModelAssembler
+    private val mapper = jacksonObjectMapper()
 
-    @GetMapping("/instances")
+    @GetMapping("")
     fun getInstances(): CollectionModel<EntityModel<InstanceInfo>> {
         val instances = serviceProvider.listInstances()
         return CollectionModel(instances.map { instanceInfo ->
             assembler.toModel(instanceInfo)
-        },
+            },
             linkTo(methodOn(ServiceController::class.java).getInstances()).withSelfRel())
     }
 
-    @GetMapping("/instances/{handle}")
-    fun getInstance(@PathVariable handle: InstanceHandle): EntityModel<InstanceInfo> {
-        logger.info(handle.toString());
-        return assembler.toModel(serviceProvider.getInstance(handle))
+    @GetMapping("/{handle}")
+    fun getInstance(@PathVariable handle: String): EntityModel<InstanceInfo> {
+        val instanceHandle = mapper.readValue(handle, InstanceHandle::class.java)
+        logger.info("Request to get instance $instanceHandle")
+        return assembler.toModel(serviceProvider.getInstance(instanceHandle))
     }
 
-    @PostMapping("/instances")
+    @PostMapping("")
     fun createInstance(@RequestBody request: CreateInstanceRequest) {
+        logger.info("Request to create instance with payload $request")
         serviceProvider.createInstance(request.provider, request.name, request.type, request.imageId, request.region)
     }
 
-    @PutMapping("/instances/{handle}")
-    fun editInstance(@PathVariable handle: InstanceHandle) {}
+    @DeleteMapping("/{handle}")
+    fun deleteInstance(@PathVariable handle: String): EntityModel<InstanceInfo> {
+        val instanceHandle = mapper.readValue(handle, InstanceHandle::class.java)
+        logger.info("Request to delete instance $instanceHandle")
+        serviceProvider.deleteInstance(instanceHandle)
+        return assembler.toModel(serviceProvider.getInstance(instanceHandle))
+    }
 
-    @DeleteMapping("/instances/{handle}")
-    fun deleteInstance(@PathVariable handle: InstanceHandle) {}
+    @PutMapping("/{handle}/start")
+    fun startInstance(@PathVariable handle: String): EntityModel<InstanceInfo> {
+        val instanceHandle = mapper.readValue(handle, InstanceHandle::class.java)
+        logger.info("Request to start instance $instanceHandle")
+        serviceProvider.startInstance(instanceHandle)
+        return assembler.toModel(serviceProvider.getInstance(instanceHandle))
+    }
 
-    @PutMapping("/instances/{handle}/start")
-    fun startInstance(@PathVariable handle: InstanceHandle) {}
-
-    @PutMapping("/instances/stop/{handle}/stop")
-    fun stopInstance(@PathVariable handle: InstanceHandle) {}
+    @PutMapping("/{handle}/stop")
+    fun stopInstance(@PathVariable handle: String): EntityModel<InstanceInfo> {
+        val instanceHandle = mapper.readValue(handle, InstanceHandle::class.java)
+        logger.info("Request to stop instance $instanceHandle")
+        serviceProvider.stopInstance(instanceHandle)
+        return assembler.toModel(serviceProvider.getInstance(instanceHandle))
+    }
 }
