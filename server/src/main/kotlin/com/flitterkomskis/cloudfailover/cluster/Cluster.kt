@@ -6,7 +6,7 @@ import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.TypeAlias
 
 @TypeAlias("cluster")
-open class Cluster(var name: String) {
+open class Cluster(var name: String = "") {
 
     @Id var id = UUID.randomUUID()
 

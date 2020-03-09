@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.hateoas.CollectionModel
 import org.springframework.hateoas.EntityModel
-import org.springframework.hateoas.Link
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn
 import org.springframework.web.bind.annotation.CrossOrigin
@@ -18,12 +17,11 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @CrossOrigin
-@RequestMapping("/clusters")
+@RequestMapping("/api/clusters")
 class ClusterController {
     private val logger: Logger = LoggerFactory.getLogger(ClusterController::class.java)
     @Autowired private lateinit var clusterService: ClusterService
@@ -36,8 +34,7 @@ class ClusterController {
         return CollectionModel(clusters.map { cluster ->
                 assembler.toModel(cluster)
             },
-            linkTo(methodOn(ClusterController::class.java).getClusters()).withSelfRel(),
-            Link("/profile/clusters", "profile")
+            linkTo(methodOn(ClusterController::class.java).getClusters()).withSelfRel()
         )
     }
 
@@ -47,12 +44,13 @@ class ClusterController {
     }
 
     @PostMapping("")
-    fun createCluster(@RequestParam name: String): EntityModel<Cluster> {
-        return assembler.toModel(clusterService.createCluster(name))
+    fun createCluster(@RequestBody payload: Map<String, Any>): EntityModel<Cluster> {
+        return assembler.toModel(clusterService.createCluster(payload))
     }
 
     @PatchMapping("/{id}")
     fun editCluster(@PathVariable id: UUID, @RequestBody payload: Map<String, Any>): EntityModel<Cluster> {
+        logger.info("Patch request for cluster $id with payload $payload")
         return assembler.toModel(clusterService.updateCluster(id, payload))
     }
 

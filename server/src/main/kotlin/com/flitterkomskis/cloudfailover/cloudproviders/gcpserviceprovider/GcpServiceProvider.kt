@@ -19,20 +19,20 @@ import java.security.GeneralSecurityException
 import java.time.Instant
 import java.util.Arrays
 import java.util.Collections
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 class GcpServiceProvider(val projectId: String) {
     private val POLL_INTERVAL = 2000
     private val logger: Logger = LoggerFactory.getLogger(GcpServiceProvider::class.java)
-    private var computeService: Compute? = null
-
-    init {
-        computeService = createComputeService()
-    }
+    private val computeService: Compute = createComputeService()
 
     @Throws(IOException::class, GeneralSecurityException::class)
-    private fun createComputeService(): Compute? {
+    private fun createComputeService(): Compute {
         val httpTransport: HttpTransport = GoogleNetHttpTransport.newTrustedTransport()
         val jsonFactory: JsonFactory = JacksonFactory.getDefaultInstance()
         var credential: GoogleCredential = GoogleCredential.getApplicationDefault()
@@ -56,8 +56,9 @@ class GcpServiceProvider(val projectId: String) {
     }
 
     private fun getInstancesInZone(zone: String): List<InstanceInfo> {
+        logger.info("Getting instances from GCP $zone")
         try {
-            val request = computeService!!.instances().list(projectId, zone)
+            val request = computeService.instances().list(projectId, zone)
             val instances = mutableListOf<InstanceInfo>()
 
             do {
@@ -83,6 +84,7 @@ class GcpServiceProvider(val projectId: String) {
                 }
                 request.pageToken = response.nextPageToken
             } while (response.nextPageToken != null)
+            logger.info("Got ${instances.size} instances from GCP $zone")
             return instances
         } catch (e: Exception) {
             throw GcpServiceProviderException("Error retrieving instances.")
@@ -102,14 +104,20 @@ class GcpServiceProvider(val projectId: String) {
     fun listInstances(): List<InstanceInfo> {
         try {
             val instances = mutableListOf<InstanceInfo>()
-            val request = computeService!!.zones().list(projectId)
+            val request = computeService.zones().list(projectId)
             var response: ZoneList
             do {
                 response = request.execute()
                 if (response.items == null)
                     continue
-                for (zone in response.items)
-                    instances.addAll(getInstancesInZone(zone.name))
+                val promises = response.items.map { zone ->
+                    GlobalScope.async {
+                        getInstancesInZone(zone.name)
+                    }
+                }
+                runBlocking {
+                    instances += promises.awaitAll().flatten()
+                }
                 request.pageToken = response.nextPageToken
             } while (response.nextPageToken != null)
             return instances
@@ -129,7 +137,7 @@ class GcpServiceProvider(val projectId: String) {
                 .setDisks(Collections.singletonList(disk))
                 .setNetworkInterfaces(Collections.singletonList(NetworkInterface()))
 
-            val request = computeService!!.instances().insert(projectId, zone, requestBody)
+            val request = computeService.instances().insert(projectId, zone, requestBody)
             request.execute()
 
             return GcpInstanceHandle(name, zone)
@@ -140,7 +148,7 @@ class GcpServiceProvider(val projectId: String) {
 
     fun deleteInstance(handle: GcpInstanceHandle): Boolean {
         try {
-            val request = computeService!!.instances().delete(projectId, handle.region, handle.instanceId)
+            val request = computeService.instances().delete(projectId, handle.region, handle.instanceId)
             request.execute()
             return true
         } catch (e: Exception) {
@@ -151,7 +159,7 @@ class GcpServiceProvider(val projectId: String) {
     fun startInstance(handle: GcpInstanceHandle): Boolean {
         try {
             val request: Compute.Instances.Start =
-                computeService!!.instances().start(projectId, handle.region, handle.instanceId)
+                computeService.instances().start(projectId, handle.region, handle.instanceId)
             request.execute()
             return true
         } catch (e: Exception) {
@@ -162,7 +170,7 @@ class GcpServiceProvider(val projectId: String) {
     fun stopInstance(handle: GcpInstanceHandle): Boolean {
         try {
             val request: Compute.Instances.Stop =
-                computeService!!.instances().stop(projectId, handle.region, handle.instanceId)
+                computeService.instances().stop(projectId, handle.region, handle.instanceId)
             request.execute()
             return true
         } catch (e: Exception) {
@@ -173,7 +181,7 @@ class GcpServiceProvider(val projectId: String) {
     fun getInstance(handle: GcpInstanceHandle): InstanceInfo {
         try {
             val request: Compute.Instances.Get =
-                computeService!!.instances().get(projectId, handle.region, handle.instanceId)
+                computeService.instances().get(projectId, handle.region, handle.instanceId)
             val response = request.execute()
             return InstanceInfo(
                 Provider.GCP,

@@ -10,7 +10,7 @@ import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration
 
 @Configuration
 @Profile("production")
-class MongoConfiguration: AbstractMongoClientConfiguration() {
+class MongoConfiguration : AbstractMongoClientConfiguration() {
     private val CONN_STR_ENV_VAR = "MULTICLOUD_FAILOVER_MONGO_CONN_STR"
 
     override fun getDatabaseName(): String {
@@ -19,7 +19,7 @@ class MongoConfiguration: AbstractMongoClientConfiguration() {
 
     override fun mongoClient(): MongoClient {
         // If environment parameters not present, use local database
-        if(!System.getenv().containsKey(CONN_STR_ENV_VAR)) {
+        if (!System.getenv().containsKey(CONN_STR_ENV_VAR)) {
             return MongoClients.create()
         }
 

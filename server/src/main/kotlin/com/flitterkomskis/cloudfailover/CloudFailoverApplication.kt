@@ -1,17 +1,18 @@
 package com.flitterkomskis.cloudfailover
 
-import com.flitterkomskis.cloudfailover.cloudproviders.ServiceProvider
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.cloud.netflix.zuul.EnableZuulProxy
 import org.springframework.context.annotation.Bean
+import org.springframework.stereotype.Controller
+import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import org.springframework.web.filter.CorsFilter
 
 @EnableZuulProxy
 @SpringBootApplication
+@Controller
 class CloudFailoverApplication {
     @Bean
     fun corsFilter(): CorsFilter? {
@@ -24,6 +25,11 @@ class CloudFailoverApplication {
         config.allowedMethods = listOf("GET", "POST", "PUT", "OPTIONS", "DELETE", "PATCH")
         source.registerCorsConfiguration("/**", config)
         return CorsFilter(source)
+    }
+
+    @RequestMapping("/{path:^(?!api)[^\\.]+}/**")
+    fun forward(): String {
+        return "forward:/"
     }
 }
 

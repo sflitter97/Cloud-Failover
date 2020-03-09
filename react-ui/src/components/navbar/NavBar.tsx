@@ -9,7 +9,7 @@ export interface NavBarProps {
 
 export const NavBar: React.FC<NavBarProps> = (props: NavBarProps) => {
   return <Navbar variant="dark" className={styles.navBar} expand="lg">
-    <Navbar.Brand href="#home">MultiCloud Failover</Navbar.Brand>
+    <Navbar.Brand as={Link} to="/clusters">MultiCloud Failover</Navbar.Brand>
     <Navbar.Toggle aria-controls="basic-navbar-nav" />
     <Navbar.Collapse id="basic-navbar-nav">
       <Nav className="mr-auto">

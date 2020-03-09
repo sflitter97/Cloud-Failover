@@ -47,6 +47,7 @@ class AzureServiceProvider {
     }
 
     fun listInstances(): List<InstanceInfo> {
+        logger.info("Getting instances from Azure")
         try {
             val instances = mutableListOf<InstanceInfo>()
             azure.virtualMachines().listByResourceGroup(resourceGroup).forEach {
@@ -67,6 +68,7 @@ class AzureServiceProvider {
                                 "State: ${it.powerState()}"
                 )
             }
+            logger.info("Got ${instances.size} instances from Azure")
             return instances
         } catch (e: Exception) {
             throw AzureServiceProviderException("Error listing instances.")
