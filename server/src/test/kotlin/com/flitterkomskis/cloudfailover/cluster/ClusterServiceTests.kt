@@ -1,5 +1,6 @@
 package com.flitterkomskis.cloudfailover.cluster
 
+import com.flitterkomskis.cloudfailover.reverseproxy.DynamicRoutingService
 import com.mongodb.internal.connection.tlschannel.util.Util.assertTrue
 import java.util.UUID
 import jdk.jfr.Category
@@ -8,7 +9,13 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.runner.RunWith
+import org.mockito.InjectMocks
+import org.mockito.Mock
+import org.mockito.Mockito
+import org.mockito.Mockito.`when`
+import org.mockito.junit.jupiter.MockitoExtension
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -17,12 +24,24 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.junit4.SpringRunner
 
 @RunWith(SpringRunner::class)
+@ExtendWith(MockitoExtension::class)
 @SpringBootTest
 @Category("Unit")
 @ActiveProfiles("test")
 class ClusterServiceTests {
     private val logger: Logger = LoggerFactory.getLogger(ClusterServiceTests::class.java)
-    @Autowired private lateinit var clusterService: ClusterService
+    @InjectMocks
+    @Autowired private lateinit var clusterService: ClusterServiceImpl
+
+    @Mock
+    private lateinit var routingService: DynamicRoutingService
+
+    // from https://medium.com/@elye.project/befriending-kotlin-and-mockito-1c2e7b0ef791
+    private fun <T> any(): T {
+        Mockito.any<T>()
+        return uninitialized()
+    }
+    private fun <T> uninitialized(): T = null as T
 
     @Test
     fun contextLoads() {
@@ -56,6 +75,9 @@ class ClusterServiceTests {
         val path = "/"
         var cluster = clusterService.createCluster(mapOf("name" to clusterName))
         clusterName = "Test cluster 2"
+
+        `when`(routingService.updateDynamicRoute(any())).thenReturn(true)
+
         cluster = clusterService.updateCluster(cluster.id, mapOf<String, Any>("name" to clusterName, "targetPort" to port, "targetPath" to path))
         assertThat(clusterService.getCluster(cluster.id).name).isEqualTo(clusterName)
         assertThat(clusterService.getCluster(cluster.id).targetPort.toString()).isEqualTo(port)

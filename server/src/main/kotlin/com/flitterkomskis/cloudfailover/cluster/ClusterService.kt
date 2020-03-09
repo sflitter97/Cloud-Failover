@@ -75,7 +75,7 @@ class ClusterServiceImpl : ClusterService {
         var cluster = getCluster(id)
         cluster = updateClusterFromPayload(cluster, payload)
         clusterRepository.save(cluster)
-        if(payload.containsKey("targetPort") || payload.containsKey("targetPath")) {
+        if (payload.containsKey("targetPort") || payload.containsKey("targetPath")) {
             routingService.updateDynamicRoute(cluster)
         }
         return cluster
