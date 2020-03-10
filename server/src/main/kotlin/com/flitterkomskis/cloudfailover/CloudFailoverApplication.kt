@@ -27,7 +27,7 @@ class CloudFailoverApplication {
         return CorsFilter(source)
     }
 
-    @RequestMapping("/{path:(?!api)[^\\.]+}/**")
+    @RequestMapping("/{path:[^\\.]*}", "/**/{path:^(?!api).*}/{path:[^\\.]*}")
     fun forward(): String {
         return "forward:/"
     }
