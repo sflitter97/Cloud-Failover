@@ -6,11 +6,10 @@ import javax.servlet.http.HttpServletRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import org.springframework.web.util.UrlPathHelper
 
 @Component
 class PreFilter : ZuulFilter() {
-    private val urlPathHelper = UrlPathHelper()
+    private val logger: Logger = LoggerFactory.getLogger(PreFilter::class.java)
     override fun filterType(): String {
         return "pre"
     }
@@ -21,26 +20,15 @@ class PreFilter : ZuulFilter() {
 
     override fun shouldFilter(): Boolean {
         val ctx: RequestContext = RequestContext.getCurrentContext()
-        val requestURL: String = ctx.getRequest().getRequestURL().toString()
-        return !(requestURL.contains("proxyurl") || requestURL.contains("/admin/"))
+        val requestURL: String = ctx.request.requestURL.toString()
+        return requestURL.contains("/api/access/")
     }
 
     override fun run(): Any? {
         val ctx: RequestContext = RequestContext.getCurrentContext()
-        val request: HttpServletRequest = ctx.getRequest()
-        log.info(
-            "PreFilter: " + String.format(
-                "%s request to %s",
-                request.method,
-                request.requestURL.toString()
-            )
-        )
-        log.info(request.toString())
+        val request: HttpServletRequest = ctx.request
+        logger.info("PreFilter: ${request.method} to ${request.requestURL}")
         // if(!request.requestURL.toString().endsWith('/'))
         return null
-    }
-
-    companion object {
-        private val log: Logger = LoggerFactory.getLogger(PreFilter::class.java)
     }
 }

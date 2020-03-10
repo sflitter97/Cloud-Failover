@@ -9,10 +9,10 @@ import com.microsoft.azure.management.network.Network
 import com.microsoft.azure.management.network.NetworkInterface
 import com.microsoft.azure.management.resources.fluentcore.arm.Region
 import com.microsoft.rest.LogLevel
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.File
 import java.time.Instant
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 class AzureServiceProvider {
     private val POLL_INTERVAL = 2000
@@ -47,6 +47,7 @@ class AzureServiceProvider {
     }
 
     fun listInstances(): List<InstanceInfo> {
+        logger.info("Getting instances from Azure")
         try {
             val instances = mutableListOf<InstanceInfo>()
             azure.virtualMachines().listByResourceGroup(resourceGroup).forEach {
@@ -62,11 +63,12 @@ class AzureServiceProvider {
                 )
                 logger.debug(
                         "Name: ${it.name()}" +
-                                "Image ID: ${it.osType().toString()}" +
+                                "Image ID: ${it.osType()}" +
                                 "Instance ID: ${it.id()}" +
                                 "State: ${it.powerState()}"
                 )
             }
+            logger.info("Got ${instances.size} instances from Azure")
             return instances
         } catch (e: Exception) {
             throw AzureServiceProviderException("Error listing instances.")
@@ -111,9 +113,9 @@ class AzureServiceProvider {
                     .withRegion(regionFromString)
                     .withExistingResourceGroup(resourceGroup)
                     .withExistingPrimaryNetworkInterface(networkInterface)
-                    .withLatestWindowsImage("MicrosoftWindowsServer", "WindowsServer", "2012-R2-Datacenter")
-                    .withAdminUsername("azureuser")
-                    .withAdminPassword("Azure12345678")
+                    .withLatestLinuxImage("Canonical", "UbuntuServer", "18.04-LTS")
+                    .withRootUsername("azureuser")
+                    .withRootPassword("Azure12345678")
                     .withComputerName(name)
                     .withSize(type)
                     .create()

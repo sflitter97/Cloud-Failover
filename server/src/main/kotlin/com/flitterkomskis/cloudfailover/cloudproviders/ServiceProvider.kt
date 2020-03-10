@@ -7,11 +7,14 @@ import com.flitterkomskis.cloudfailover.cloudproviders.azureserviceprovider.Azur
 import com.flitterkomskis.cloudfailover.cloudproviders.gcpserviceprovider.GcpInstanceHandle
 import com.flitterkomskis.cloudfailover.cloudproviders.gcpserviceprovider.GcpServiceProvider
 import javax.annotation.PostConstruct
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 
-@Component
+@Service
 class ServiceProvider {
     private val logger: Logger = LoggerFactory.getLogger(ServiceProvider::class.java)
     private val AWS_NOT_INITIALIZED_MESSAGE = "AWS not initialized."
@@ -42,10 +45,28 @@ class ServiceProvider {
     }
 
     fun listInstances(): List<InstanceInfo> {
-        val instances = mutableListOf<InstanceInfo>()
-        instances += awsProvider?.listInstances() ?: mutableListOf()
-        instances += gcpProvider?.listInstances() ?: mutableListOf()
-        instances += azureProvider?.listInstances() ?: mutableListOf()
+        var instances = listOf<InstanceInfo>()
+        val awsInstances = GlobalScope.async {
+            logger.info("Getting instances from AWS")
+            val partInstances = awsProvider?.listInstances() ?: mutableListOf()
+            logger.info("Got ${partInstances.size} instances from AWS")
+            partInstances
+        }
+        val gcpInstances = GlobalScope.async {
+            logger.info("Getting instances from GCP")
+            val partInstances = gcpProvider?.listInstances() ?: mutableListOf()
+            logger.info("Got ${partInstances.size} instances from GCP")
+            partInstances
+        }
+        val azureInstances = GlobalScope.async {
+            logger.info("Getting instances from Azure")
+            val partInstances = azureProvider?.listInstances() ?: mutableListOf()
+            logger.info("Got ${partInstances.size} instances from Azure")
+            partInstances
+        }
+        runBlocking {
+            instances = awsInstances.await() + gcpInstances.await() + azureInstances.await()
+        }
         return instances
     }
 
