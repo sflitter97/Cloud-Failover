@@ -7,6 +7,10 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
+/**
+ * Filter for the Zuul proxy before requests are forwarded. Currently only logs requests as they are made for
+ * debugging purposes.
+ */
 @Component
 class PreFilter : ZuulFilter() {
     private val logger: Logger = LoggerFactory.getLogger(PreFilter::class.java)
@@ -28,7 +32,6 @@ class PreFilter : ZuulFilter() {
         val ctx: RequestContext = RequestContext.getCurrentContext()
         val request: HttpServletRequest = ctx.request
         logger.info("PreFilter: ${request.method} to ${request.requestURL}")
-        // if(!request.requestURL.toString().endsWith('/'))
         return null
     }
 }

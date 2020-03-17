@@ -28,12 +28,20 @@ import software.amazon.awssdk.services.ec2.model.StopInstancesRequest
 import software.amazon.awssdk.services.ec2.model.Tag
 import software.amazon.awssdk.services.ec2.model.TerminateInstancesRequest
 
+/**
+ * Adapter for manipulating AWS instances. Provides a generic interface for interacting with instances on AWS.
+ */
 class AwsServiceProvider(private val accessKey: String, private val secretKey: String) {
     private val logger: Logger = LoggerFactory.getLogger(AwsServiceProvider::class.java)
     private val MAX_RESULTS_ALLOWED = 1000
     private val POLL_INTERVAL = 2000
     private val ec2Clients: MutableMap<Region, Ec2Client> = mutableMapOf()
 
+    /**
+     * Get an ec2 client for the given [Region], creating it if it doesn't exist.
+     * @param region Region in which to create the client.
+     * @return Client object for interacting with AWS.
+     */
     private fun getClient(region: Region): Ec2Client {
         return ec2Clients.getOrPut(region) {
             Ec2Client.builder().credentialsProvider(StaticCredentialsProvider.create(
@@ -46,17 +54,31 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
         }
     }
 
+    /**
+     * Get an ec2 client for the given [Region], creating it if it doesn't exist.
+     * @param region Region in which to create the client.
+     * @return Client object for interacting with AWS.
+     */
     private fun getClient(region: String): Ec2Client {
         return getClient(Region.of(region))
     }
 
+    /**
+     * Gets a list of [Region]s available for the current AWS account.
+     * @return A list of [Region] which the current account can access.
+     */
     private fun getRegions(): List<Region> {
         // us-east-1 is always active, so we can use it to find which other regions are enabled
         val client = getClient(Region.US_EAST_1)
         return client.describeRegions().regions().map { region -> Region.of(region.regionName()) }
     }
 
-    // from https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/ec2/model/InstanceState.html#code--
+    /**
+     * Helper function to convert the state code of an instance into the corresponding [InstanceState]. Base on
+     * https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/ec2/model/InstanceState.html#code--
+     * @param stateCode The state code of the instance from AWS
+     * @return The matching [InstanceState] for the state code
+     */
     private fun getInstanceState(stateCode: Int): InstanceState {
         return when (stateCode and 0b11111111) {
             0 -> InstanceState.PENDING
@@ -69,9 +91,12 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
         }
     }
 
+    /**
+     * Get a list of all the instances across all AWS regions.
+     * @return [List] of [InstanceInfo] describing all instances available to this AWS account across all available
+     * AWS regions.
+     */
     fun listInstances(): List<InstanceInfo> {
-        // val instances = mutableListOf<InstanceInfo>()
-
         var ret = listOf<InstanceInfo>()
         val promises = getRegions().map { region ->
             GlobalScope.async {
@@ -118,6 +143,14 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
         return ret
     }
 
+    /**
+     * Creates an instance in the given region with the given details.
+     * @param name The name of the instance.
+     * @param type The type / size of the instance.
+     * @param imageId The image with which the instance will be created.
+     * @param region The region in which to create the instance.
+     * @return A handle to the instance that uniquely identifies it.
+     */
     fun createInstance(name: String, type: String, imageId: String, region: String): AwsInstanceHandle {
         val client = getClient(region)
         val runRequest = RunInstancesRequest.builder()
@@ -149,6 +182,11 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
         return AwsInstanceHandle(instanceId, region)
     }
 
+    /**
+     * Deletes the instance with the given handle.
+     * @param handle The handle that uniquely identifies the instance to be deleted.
+     * @return True if the instance was successfully deleted and false otherwise.
+     */
     fun deleteInstance(handle: AwsInstanceHandle): Boolean {
         val client = getClient(handle.region)
 
@@ -161,6 +199,11 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
         return response.terminatingInstances().find { stateChange -> stateChange.instanceId() == handle.instanceId } != null
     }
 
+    /**
+     * Starts the instance with the given handle.
+     * @param handle The handle that uniquely identifies the instance to be started.
+     * @return True if the instance was successfully started and false otherwise.
+     */
     fun startInstance(handle: AwsInstanceHandle): Boolean {
         val client = getClient(handle.region)
 
@@ -173,6 +216,11 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
         return response.startingInstances().find { stateChange -> stateChange.instanceId() == handle.instanceId } != null
     }
 
+    /**
+     * Stops the instance with the given handle.
+     * @param handle The handle that uniquely identifies the instance to be stopped.
+     * @return True if the instance was successfully stopped and false otherwise.
+     */
     fun stopInstance(handle: AwsInstanceHandle): Boolean {
         val client = getClient(handle.region)
 
@@ -185,6 +233,11 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
         return response.stoppingInstances().find { stateChange -> stateChange.instanceId() == handle.instanceId } != null
     }
 
+    /**
+     * Gets the instance information for the instance with the given handle
+     * @param handle The handle that uniquely identifies the instance.
+     * @return [InstanceInfo] describing the instance.
+     */
     fun getInstance(handle: AwsInstanceHandle): InstanceInfo {
         logger.info("Getting instance for handle $handle")
         val client = getClient(handle.region)
@@ -219,6 +272,13 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
         }
     }
 
+    /**
+     * Polls an instance until it reaches the given state or until the timeout is reached.
+     * @param handle The handle that uniquely identifies the instance.
+     * @param state The [InstanceState] to wait for.
+     * @param timeout The maximum amount of time to wait for the instance to reach the state.
+     * @return True if the instance reaches state before the timeout and false otherwise.
+     */
     fun waitForState(handle: AwsInstanceHandle, state: InstanceState, timeout: Int): Boolean {
         val startTime = Instant.now()
         val timeoutTime = startTime.plusSeconds(timeout.toLong())

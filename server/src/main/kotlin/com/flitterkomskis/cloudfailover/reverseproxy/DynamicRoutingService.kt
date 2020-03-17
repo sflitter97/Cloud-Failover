@@ -14,6 +14,10 @@ import org.springframework.cloud.netflix.zuul.filters.ZuulProperties.ZuulRoute
 import org.springframework.cloud.netflix.zuul.web.ZuulHandlerMapping
 import org.springframework.stereotype.Service
 
+/**
+ * Provides the ability to modify the routes in the Zuul Proxy, which forwards requests to a cluster to the appropriate
+ * instance.
+ */
 @Service
 class DynamicRoutingService @Autowired constructor(
     private val zuulProperties: ZuulProperties,
@@ -25,6 +29,9 @@ class DynamicRoutingService @Autowired constructor(
     private val ACCESS_PREFIX = "/api/access"
     @Autowired private lateinit var serviceProvider: ServiceProvider
 
+    /**
+     * Initializes the Zuul Proxy when the application starts. Re-adds existing routes to the proxy.
+     */
     @PostConstruct
     fun initialize() {
         try {
@@ -37,6 +44,11 @@ class DynamicRoutingService @Autowired constructor(
         }
     }
 
+    /**
+     * Updates the route for the given [Cluster].
+     * @param cluster The [Cluster] whose route is to be updated.
+     * @return Returns true if the route is updated successfully and false otherwise.
+     */
     fun updateDynamicRoute(cluster: Cluster): Boolean {
         logger.debug("Applying cluster $cluster to zuul proxy.", cluster)
         addDynamicRouteInZuul(cluster)
@@ -46,24 +58,41 @@ class DynamicRoutingService @Autowired constructor(
 
     private fun addDynamicRouteInZuul(cluster: Cluster) {
         val url = createTargetURL(cluster)
-        zuulProperties.getRoutes().put(
+        zuulProperties.routes[cluster.id.toString()] = ZuulRoute(
             cluster.id.toString(),
-            ZuulRoute(
-                cluster.id.toString(), "$ACCESS_PREFIX/${cluster.id}/**",
-                null, url, true, false, HashSet()
-            )
+            "$ACCESS_PREFIX/${cluster.id}/**",
+            null,
+            url,
+            true,
+            false, HashSet()
         )
     }
 
+    /**
+     * Helper function that creates the target URL for a given [Cluster]. Get the url of the access instance of the
+     * [Cluster] and adds the port and path from the [Cluster].
+     * @param cluster The [Cluster] to create a target url for.
+     * @return The target url for cluster.
+     */
     private fun createTargetURL(cluster: Cluster): String {
         val accessInstance = cluster.accessInstance ?: throw DynamicRoutingServiceException("Cluster has no access instance defined.")
         val instanceInfo = serviceProvider.getInstance(accessInstance)
         if (instanceInfo.state != InstanceState.RUNNING) {
-            throw IllegalStateException("Cannot change access instance for cluster ${cluster.id}. Instance with handle $accessInstance is not running.")
+            throw IllegalStateException("Cannot set route for cluster ${cluster.id}. Instance with handle $accessInstance is not running.")
         }
         val host = serviceProvider.getInstance(accessInstance).host
         val targetUrl = "${HTTP_PROTOCOL}$host:${cluster.targetPort}${cluster.targetPath}"
         logger.info("Target URL for cluster $cluster is $targetUrl")
         return targetUrl
+    }
+
+    /**
+     * Removes a route for a [Cluster].
+     * @param cluster The [Cluster] whose route to remove.
+     * @return True if the route was removed and false otherwise.
+     */
+    fun removeDynamicRoute(cluster: Cluster): Boolean {
+        zuulProperties.routes.remove(cluster.id.toString())
+        return true
     }
 }

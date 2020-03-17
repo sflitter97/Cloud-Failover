@@ -7,6 +7,11 @@ import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
 import com.flitterkomskis.cloudfailover.cloudproviders.ServiceProvider
 import org.springframework.data.annotation.TypeAlias
 
+/**
+ * Implementation of [InstanceHandle] for instances within AWS.
+ * @property instanceId AWS given instance id. Unique within a region, but no necessarily across regions.
+ * @property region The region in which the instance is located.
+ */
 @TypeAlias("AwsInstanceHandle")
 @JsonTypeName("AwsInstanceHandle")
 data class AwsInstanceHandle(val instanceId: String, val region: String) : InstanceHandle {

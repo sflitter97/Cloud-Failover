@@ -17,7 +17,6 @@ import com.google.api.services.compute.model.ZoneList
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.time.Instant
-import java.util.Arrays
 import java.util.Collections
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
@@ -26,7 +25,10 @@ import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class GcpServiceProvider(val projectId: String) {
+/**
+ * Adapter for manipulating GCP instances. Provides a generic interface for interacting with instances on GCP.
+ */
+class GcpServiceProvider(private val projectId: String) {
     private val POLL_INTERVAL = 2000
     private val logger: Logger = LoggerFactory.getLogger(GcpServiceProvider::class.java)
     private val computeService: Compute = createComputeService()
@@ -37,12 +39,17 @@ class GcpServiceProvider(val projectId: String) {
         val jsonFactory: JsonFactory = JacksonFactory.getDefaultInstance()
         var credential: GoogleCredential = GoogleCredential.getApplicationDefault()
         if (credential.createScopedRequired())
-            credential = credential.createScoped(Arrays.asList("https://www.googleapis.com/auth/cloud-platform"))
+            credential = credential.createScoped(listOf("https://www.googleapis.com/auth/cloud-platform"))
         return Compute.Builder(httpTransport, jsonFactory, credential)
             .setApplicationName(projectId)
             .build()
     }
 
+    /**
+     * Helper function to convert the status of an instance into the corresponding [InstanceState].
+     * @param status The status of the instance from Azure
+     * @return The matching [InstanceState] for the status
+     */
     private fun getInstanceState(status: String): InstanceState {
         return when (status) {
             "PROVISIONING" -> InstanceState.PROVISIONING
@@ -55,6 +62,11 @@ class GcpServiceProvider(val projectId: String) {
         }
     }
 
+    /**
+     * Gets a list of all instances in a given zone.
+     * @param zone The zone in which to list instances.
+     * @return [List] of [InstanceInfo] describing the instances in the given zone.
+     */
     private fun getInstancesInZone(zone: String): List<InstanceInfo> {
         logger.info("Getting instances from GCP $zone")
         try {
@@ -91,6 +103,11 @@ class GcpServiceProvider(val projectId: String) {
         }
     }
 
+    /**
+     * Helper function to created a disk for an instance.
+     * @param image The image to use when creating the disk.
+     * @return The [AttachedDisk] which will be attached to the instance.
+     */
     private fun initializeDisk(image: String): AttachedDisk {
         val disk = AttachedDisk()
         disk.boot = true
@@ -101,6 +118,10 @@ class GcpServiceProvider(val projectId: String) {
         return disk
     }
 
+    /**
+     * Get a list of all the instances from GCP.
+     * @return [List] of [InstanceInfo] describing all instances created by the GCP account across all GCP zones.
+     */
     fun listInstances(): List<InstanceInfo> {
         try {
             val instances = mutableListOf<InstanceInfo>()
@@ -126,6 +147,14 @@ class GcpServiceProvider(val projectId: String) {
         }
     }
 
+    /**
+     * Creates an instance in the given region with the given details.
+     * @param name The name of the instance.
+     * @param type The type / size of the instance.
+     * @param image The image with which the instance will be created.
+     * @param zone The region in which to create the instance.
+     * @return A handle to the instance that uniquely identifies it.
+     */
     fun createInstance(name: String, type: String, image: String, zone: String): GcpInstanceHandle {
         try {
             val disk = initializeDisk(image)
@@ -142,10 +171,15 @@ class GcpServiceProvider(val projectId: String) {
 
             return GcpInstanceHandle(name, zone)
         } catch (e: Exception) {
-            throw GcpServiceProviderException("Error creating instance")
+            throw GcpServiceProviderException("Error creating instance ${e.message}")
         }
     }
 
+    /**
+     * Deletes the instance with the given handle.
+     * @param handle The handle that uniquely identifies the instance to be deleted.
+     * @return True if the instance was successfully deleted and false otherwise.
+     */
     fun deleteInstance(handle: GcpInstanceHandle): Boolean {
         try {
             val request = computeService.instances().delete(projectId, handle.region, handle.instanceId)
@@ -156,6 +190,11 @@ class GcpServiceProvider(val projectId: String) {
         }
     }
 
+    /**
+     * Starts the instance with the given handle.
+     * @param handle The handle that uniquely identifies the instance to be started.
+     * @return True if the instance was successfully started and false otherwise.
+     */
     fun startInstance(handle: GcpInstanceHandle): Boolean {
         try {
             val request: Compute.Instances.Start =
@@ -167,6 +206,11 @@ class GcpServiceProvider(val projectId: String) {
         }
     }
 
+    /**
+     * Stops the instance with the given handle.
+     * @param handle The handle that uniquely identifies the instance to be stopped.
+     * @return True if the instance was successfully stopped and false otherwise.
+     */
     fun stopInstance(handle: GcpInstanceHandle): Boolean {
         try {
             val request: Compute.Instances.Stop =
@@ -178,6 +222,11 @@ class GcpServiceProvider(val projectId: String) {
         }
     }
 
+    /**
+     * Gets the instance information for the instance with the given handle
+     * @param handle The handle that uniquely identifies the instance.
+     * @return [InstanceInfo] describing the instance.
+     */
     fun getInstance(handle: GcpInstanceHandle): InstanceInfo {
         try {
             val request: Compute.Instances.Get =
@@ -195,6 +244,13 @@ class GcpServiceProvider(val projectId: String) {
         }
     }
 
+    /**
+     * Polls an instance until it reaches the given state or until the timeout is reached.
+     * @param handle The handle that uniquely identifies the instance.
+     * @param state The [InstanceState] to wait for.
+     * @param timeout The maximum amount of time to wait for the instance to reach the state.
+     * @return True if the instance reaches state before the timeout and false otherwise.
+     */
     fun waitForState(handle: GcpInstanceHandle, state: InstanceState, timeout: Int): Boolean {
         val startTime = Instant.now()
         val timeoutTime = startTime.plusSeconds(timeout.toLong())

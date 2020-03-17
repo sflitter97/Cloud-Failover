@@ -94,7 +94,11 @@ export class InstanceList extends React.Component<InstanceListProps, InstanceLis
         dataField: 'host',
         text: 'Host',
         formatter: (cell: string, row: any, rowIndex: number, formatExtraData: any) => {
-          return <a href={'//' + cell} rel="noopener noreferrer" target="_blank">{cell}</a>;
+          let url = "";
+          if(cell !== "") {
+            url = /http[s]*:\/\//.test(cell) ? cell : "http://" + cell;
+          }
+          return <a href={url} rel="noopener noreferrer" target="_blank">{url}</a>;
         }
       }
     ]

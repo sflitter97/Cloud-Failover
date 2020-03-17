@@ -14,6 +14,9 @@ import java.time.Instant
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+/**
+ * Adapter for manipulating Azure instances. Provides a generic interface for interacting with instances on Azure.
+ */
 class AzureServiceProvider {
     private val POLL_INTERVAL = 2000
     private val logger: Logger = LoggerFactory.getLogger(AzureServiceProvider::class.java)
@@ -33,6 +36,11 @@ class AzureServiceProvider {
         }
     }
 
+    /**
+     * Helper function to convert the [PowerState] of an instance into the corresponding [InstanceState].
+     * @param state The [PowerState] of the instance from Azure
+     * @return The matching [InstanceState] for the [PowerState]
+     */
     private fun getInstanceState(state: PowerState): InstanceState {
         return when (state) {
             PowerState.DEALLOCATED -> InstanceState.DEALLOCATED
@@ -46,6 +54,10 @@ class AzureServiceProvider {
         }
     }
 
+    /**
+     * Get a list of all the instances from Azure.
+     * @return [List] of [InstanceInfo] describing all instances created by the Azure account.
+     */
     fun listInstances(): List<InstanceInfo> {
         logger.info("Getting instances from Azure")
         try {
@@ -71,10 +83,18 @@ class AzureServiceProvider {
             logger.info("Got ${instances.size} instances from Azure")
             return instances
         } catch (e: Exception) {
-            throw AzureServiceProviderException("Error listing instances.")
+            throw AzureServiceProviderException("Error listing instances ${e.message}.")
         }
     }
 
+    /**
+     * Creates an instance in the given region with the given details.
+     * @param name The name of the instance.
+     * @param type The type / size of the instance.
+     * @param imageId The image with which the instance will be created.
+     * @param region The region in which to create the instance.
+     * @return A handle to the instance that uniquely identifies it.
+     */
     fun createInstance(name: String, type: String, imageId: String, region: String): AzureInstanceHandle {
         try {
             val regionFromString: Region = Region.findByLabelOrName(region)
@@ -122,11 +142,15 @@ class AzureServiceProvider {
 
             return AzureInstanceHandle(name, resourceGroup)
         } catch (e: Exception) {
-            println(e.message)
-            throw AzureServiceProviderException("Error creating instance")
+            throw AzureServiceProviderException("Error creating instance ${e.message}")
         }
     }
 
+    /**
+     * Deletes the instance with the given handle.
+     * @param handle The handle that uniquely identifies the instance to be deleted.
+     * @return True if the instance was successfully deleted and false otherwise.
+     */
     fun deleteInstance(handle: AzureInstanceHandle): Boolean {
         try {
             val vm =
@@ -134,10 +158,15 @@ class AzureServiceProvider {
             azure.virtualMachines().deleteById(vm.id())
             return true
         } catch (e: Exception) {
-            throw AzureServiceProviderException("Error deleting instance")
+            throw AzureServiceProviderException("Error deleting instance ${e.message}.")
         }
     }
 
+    /**
+     * Starts the instance with the given handle.
+     * @param handle The handle that uniquely identifies the instance to be started.
+     * @return True if the instance was successfully started and false otherwise.
+     */
     fun startInstance(handle: AzureInstanceHandle): Boolean {
         try {
             val vm =
@@ -145,10 +174,15 @@ class AzureServiceProvider {
             vm.start()
             return true
         } catch (e: Exception) {
-            throw AzureServiceProviderException("Error starting instance")
+            throw AzureServiceProviderException("Error starting instance ${e.message}.")
         }
     }
 
+    /**
+     * Stops the instance with the given handle.
+     * @param handle The handle that uniquely identifies the instance to be stopped.
+     * @return True if the instance was successfully stopped and false otherwise.
+     */
     fun stopInstance(handle: AzureInstanceHandle): Boolean {
         try {
             val vm =
@@ -156,10 +190,15 @@ class AzureServiceProvider {
             vm.deallocate()
             return true
         } catch (e: Exception) {
-            throw AzureServiceProviderException("Error stopping instance")
+            throw AzureServiceProviderException("Error stopping instance ${e.message}.")
         }
     }
 
+    /**
+     * Gets the instance information for the instance with the given handle
+     * @param handle The handle that uniquely identifies the instance.
+     * @return [InstanceInfo] describing the instance.
+     */
     fun getInstance(handle: AzureInstanceHandle): InstanceInfo {
         try {
             val vm =
@@ -170,13 +209,20 @@ class AzureServiceProvider {
                     vm.size().toString(),
                     getInstanceState(vm.powerState()),
                     handle,
-                    vm.primaryNetworkInterface.toString()
+                    vm.primaryPublicIPAddress.ipAddress()
             )
         } catch (e: Exception) {
-            throw AzureServiceProviderException("Error getting instance")
+            throw AzureServiceProviderException("Error getting instance ${e.message}")
         }
     }
 
+    /**
+     * Polls an instance until it reaches the given state or until the timeout is reached.
+     * @param handle The handle that uniquely identifies the instance.
+     * @param state The [InstanceState] to wait for.
+     * @param timeout The maximum amount of time to wait for the instance to reach the state.
+     * @return True if the instance reaches state before the timeout and false otherwise.
+     */
     fun waitForState(handle: AzureInstanceHandle, state: InstanceState, timeout: Int): Boolean {
         val startTime = Instant.now()
         val timeoutTime = startTime.plusSeconds(timeout.toLong())

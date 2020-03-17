@@ -7,6 +7,11 @@ import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
 import com.flitterkomskis.cloudfailover.cloudproviders.ServiceProvider
 import org.springframework.data.annotation.TypeAlias
 
+/**
+ * Implementation of [InstanceHandle] for instances within GCP.
+ * @property instanceId GCP given instance id.
+ * @property region The region in which the instance is located.
+ */
 @TypeAlias("GcpInstanceHandle")
 @JsonTypeName("GcpInstanceHandle")
 class GcpInstanceHandle(val instanceId: String, val region: String) : InstanceHandle {

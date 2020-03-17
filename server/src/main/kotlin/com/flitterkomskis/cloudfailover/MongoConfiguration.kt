@@ -8,6 +8,12 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
 import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration
 
+/**
+ * Sets up the connection to the Mongo database in a production / development environment (not testing).
+ * If the MULTICLOUD_FAILOVER_MONGO_CONN_STR envrionmental variable is present, it will be used as the connection string
+ * to the server. Otherwise, it will attempt to connect to a MongoDB running on the local machine on the default port
+ * (27017).
+ */
 @Configuration
 @Profile("production")
 class MongoConfiguration : AbstractMongoClientConfiguration() {

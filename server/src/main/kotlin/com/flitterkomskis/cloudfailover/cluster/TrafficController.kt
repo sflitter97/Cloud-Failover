@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
 
+/**
+ * Provides [Cluster] access management API methods, such as accessing and changing the access instance of a [Cluster].
+ */
 @RestController
 @CrossOrigin
 @RequestMapping("/api/traffic")
@@ -31,6 +34,11 @@ class TrafficController {
     @Autowired private lateinit var instanceModelAssembler: InstanceModelAssembler
     @Autowired private lateinit var clusterModelAssembler: ClusterModelAssembler
 
+    /**
+     * Returns the [InstanceInfo] for the access instance of the [Cluster] given by id.
+     * @param id ID that uniquely identifies the cluster.
+     * @return The [InstanceInfo] for the instance serving as the access instance of the [Cluster].
+     */
     @GetMapping("/{id}")
     fun getCurrentCloudProvider(@PathVariable id: UUID): EntityModel<InstanceInfo> {
         val cluster = clusterService.getCluster(id)

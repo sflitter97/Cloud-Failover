@@ -14,6 +14,10 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
+/**
+ * Facade / service layer between the instance management API and the cloud providers. Provides a generalized single
+ * point of access for manipulating instances.
+ */
 @Service
 class ServiceProvider {
     private val logger: Logger = LoggerFactory.getLogger(ServiceProvider::class.java)
@@ -25,25 +29,31 @@ class ServiceProvider {
     private var azureProvider: AzureServiceProvider? = null
 
     @PostConstruct
-    fun initAws() {
+    private fun initServiceProviders() {
         initAws(System.getenv("AWS_ACCESS_KEY"), System.getenv("AWS_SECRET_KEY"))
+        initGcp(System.getenv("GCP_PROJECT"))
+        initAzure()
     }
 
-    fun initAws(accessKey: String, secretKey: String) {
+    private fun initAws(accessKey: String, secretKey: String) {
         awsProvider = AwsServiceProvider(accessKey, secretKey)
         logger.info("AWS initialized")
     }
 
-    fun initGcp(projectId: String) {
+    private fun initGcp(projectId: String) {
         gcpProvider = GcpServiceProvider(projectId)
         logger.info("GCP initialized")
     }
 
-    fun initAzure() {
+    private fun initAzure() {
         azureProvider = AzureServiceProvider()
         logger.info("AZURE initialized")
     }
 
+    /**
+     * Lists all instances from all providers
+     * @return A list of [InstanceInfo]s describing the instances.
+     */
     fun listInstances(): List<InstanceInfo> {
         var instances = listOf<InstanceInfo>()
         val awsInstances = GlobalScope.async {
@@ -70,6 +80,12 @@ class ServiceProvider {
         return instances
     }
 
+    /**
+     * Retrieves the [InstanceInfo] for the instance identified by the given handle. Will call a method on the
+     * handle to determine which of the overloaded functions below to call.
+     * @param handle Stringified [InstanceHandle] that uniquely identifies the instance.
+     * @return The [InstanceInfo] for the given handle.
+     */
     fun getInstance(handle: InstanceHandle): InstanceInfo {
         return handle.acceptGetInstance(this)
     }
@@ -86,6 +102,16 @@ class ServiceProvider {
         return azureProvider?.getInstance(handle) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
     }
 
+    /**
+     * Creates and instance with the given details. Will call a method on the handle to determine which of the
+     * overloaded functions below to call.
+     * @param provider The cloud provider on which the instance will be created.
+     * @param name The name of the instance.
+     * @param type The type / size of the instance.
+     * @param imageId The image with which the instance will be created. Allows for creating preconfigured instances.
+     * @param region The region in which to create the instance.
+     * @return The [InstanceHandle] for the created instance.
+     */
     fun createInstance(provider: Provider, name: String, type: String, imageId: String, region: String): InstanceHandle {
         return when (provider) {
             Provider.AWS -> awsProvider?.createInstance(name, type, imageId, region) ?: throw ServiceProviderException(AWS_NOT_INITIALIZED_MESSAGE)
@@ -94,6 +120,12 @@ class ServiceProvider {
         }
     }
 
+    /**
+     * Deletes the instance identified by the given handle. Will call a method on the handle to determine which of
+     * the overloaded functions below to call.
+     * @param handle Stringified [InstanceHandle] that uniquely identifies the instance.
+     * @return The [InstanceInfo] for the given handle.
+     */
     fun deleteInstance(handle: InstanceHandle): Boolean {
         return handle.acceptDeleteInstance(this)
     }
@@ -110,6 +142,12 @@ class ServiceProvider {
         return azureProvider?.deleteInstance(handle) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
     }
 
+    /**
+     * Starts the instance identified by the given handle. Will call a method on the handle to determine which of
+     * the overloaded functions below to call.
+     * @param handle Stringified [InstanceHandle] that uniquely identifies the instance.
+     * @return The [InstanceInfo] for the given handle.
+     */
     fun startInstance(handle: InstanceHandle): Boolean {
         return handle.acceptStartInstance(this)
     }
@@ -126,6 +164,12 @@ class ServiceProvider {
         return azureProvider?.startInstance(handle) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
     }
 
+    /**
+     * Stops the instance identified by the given handle. Will call a method on the handle to determine which of
+     * the overloaded functions below to call.
+     * @param handle Stringified [InstanceHandle] that uniquely identifies the instance.
+     * @return The [InstanceInfo] for the given handle.
+     */
     fun stopInstance(handle: InstanceHandle): Boolean {
         return handle.acceptStopInstance(this)
     }
@@ -142,6 +186,15 @@ class ServiceProvider {
         return azureProvider?.stopInstance(handle) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
     }
 
+    /**
+     * Waits for the instance identified by the given handle to reach the given [InstanceState]. Returns true if the
+     * instance reaches state before the timeout and false otherwise. Will call a method on the handle to determine
+     * which of the overloaded functions below to call.
+     * @param handle Stringified [InstanceHandle] that uniquely identifies the instance.
+     * @param state The [InstanceState] to wait for.
+     * @param timeout The maximum amount of time to spend waiting for state before giving up.
+     * @return True if the instance reaches the given state by the timeout and false otherwise.
+     */
     fun waitForState(handle: InstanceHandle, state: InstanceState, timeout: Int = 300): Boolean {
         return handle.acceptWaitForState(this, state, timeout)
     }

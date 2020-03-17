@@ -1,3 +1,4 @@
+
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -6,6 +7,7 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint") version "9.1.1"
     kotlin("jvm") version "1.3.61"
     kotlin("plugin.spring") version "1.3.61"
+    id("org.jetbrains.dokka") version "0.10.1"
 }
 
 group = "com.flitterkomskis"
@@ -13,6 +15,7 @@ version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 repositories {
+    jcenter()
     mavenCentral()
 }
 
@@ -85,6 +88,11 @@ tasks {
         useJUnitPlatform()
     }
     build {
-        dependsOn.add("integrationTest")
+        // dependsOn.add("integrationTest")
+    }
+
+    dokka {
+        outputFormat = "html"
+        outputDirectory = "$buildDir/dokka"
     }
 }
