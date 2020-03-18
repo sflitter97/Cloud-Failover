@@ -209,7 +209,7 @@ class AzureServiceProvider {
                     vm.size().toString(),
                     getInstanceState(vm.powerState()),
                     handle,
-                    vm.primaryPublicIPAddress.ipAddress()
+                    vm.primaryPublicIPAddress.ipAddress() ?: ""
             )
         } catch (e: Exception) {
             throw AzureServiceProviderException("Error getting instance ${e.message}")

@@ -29,23 +29,23 @@ class ServiceProvider {
     private var azureProvider: AzureServiceProvider? = null
 
     @PostConstruct
-    private fun initServiceProviders() {
+    fun initServiceProviders() {
         initAws(System.getenv("AWS_ACCESS_KEY"), System.getenv("AWS_SECRET_KEY"))
         initGcp(System.getenv("GCP_PROJECT"))
         initAzure()
     }
 
-    private fun initAws(accessKey: String, secretKey: String) {
+    fun initAws(accessKey: String, secretKey: String) {
         awsProvider = AwsServiceProvider(accessKey, secretKey)
         logger.info("AWS initialized")
     }
 
-    private fun initGcp(projectId: String) {
+    fun initGcp(projectId: String) {
         gcpProvider = GcpServiceProvider(projectId)
         logger.info("GCP initialized")
     }
 
-    private fun initAzure() {
+    fun initAzure() {
         azureProvider = AzureServiceProvider()
         logger.info("AZURE initialized")
     }

@@ -88,7 +88,7 @@ tasks {
         useJUnitPlatform()
     }
     build {
-        // dependsOn.add("integrationTest")
+        dependsOn.add("integrationTest")
     }
 
     dokka {
