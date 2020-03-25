@@ -45,7 +45,7 @@ class GcpServiceProviderTests {
         val provider = Provider.GCP
         val name = "test-instance2"
         val type = "zones/us-west1-a/machineTypes/n1-standard-1"
-        val imageId = "projects/debian-cloud/global/images/family/debian-9"
+        val imageId = "global/images/task-server"
         val region = "us-west1-a"
 
         val handle = serviceProvider.createInstance(provider, name, type, imageId, region)

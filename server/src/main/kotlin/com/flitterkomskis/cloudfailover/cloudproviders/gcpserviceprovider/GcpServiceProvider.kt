@@ -9,11 +9,7 @@ import com.google.api.client.http.HttpTransport
 import com.google.api.client.json.JsonFactory
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.compute.Compute
-import com.google.api.services.compute.model.AttachedDisk
-import com.google.api.services.compute.model.AttachedDiskInitializeParams
-import com.google.api.services.compute.model.Instance
-import com.google.api.services.compute.model.NetworkInterface
-import com.google.api.services.compute.model.ZoneList
+import com.google.api.services.compute.model.*
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.time.Instant
@@ -158,13 +154,15 @@ class GcpServiceProvider(private val projectId: String) {
     fun createInstance(name: String, type: String, image: String, zone: String): GcpInstanceHandle {
         try {
             val disk = initializeDisk(image)
+            val networkInterface = NetworkInterface()
+            networkInterface.accessConfigs = Collections.singletonList(AccessConfig())
 
             val requestBody = Instance()
                 .setName(name)
                 .setMachineType(type)
                 .setZone(zone)
                 .setDisks(Collections.singletonList(disk))
-                .setNetworkInterfaces(Collections.singletonList(NetworkInterface()))
+                .setNetworkInterfaces(Collections.singletonList(networkInterface))
 
             val request = computeService.instances().insert(projectId, zone, requestBody)
             request.execute()

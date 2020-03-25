@@ -7,6 +7,7 @@ import com.microsoft.azure.management.Azure
 import com.microsoft.azure.management.compute.PowerState
 import com.microsoft.azure.management.network.Network
 import com.microsoft.azure.management.network.NetworkInterface
+import com.microsoft.azure.management.network.NetworkSecurityGroup
 import com.microsoft.azure.management.resources.fluentcore.arm.Region
 import com.microsoft.rest.LogLevel
 import java.io.File
@@ -95,9 +96,11 @@ class AzureServiceProvider {
      * @param region The region in which to create the instance.
      * @return A handle to the instance that uniquely identifies it.
      */
-    fun createInstance(name: String, type: String, imageId: String, region: String): AzureInstanceHandle {
+    fun createInstance(name: String, type: String, imageId: String, region: String, ntwkSecGrp: String = "networking-rules-nsg"): AzureInstanceHandle {
         try {
             val regionFromString: Region = Region.findByLabelOrName(region)
+            val networkSecurityGroup: NetworkSecurityGroup =
+                    azure.networkSecurityGroups().getByResourceGroup(resourceGroup, ntwkSecGrp)
 
             // Creating public IP address
             val publicIPAddress = azure.publicIPAddresses()
@@ -125,6 +128,7 @@ class AzureServiceProvider {
                     .withSubnet("mySubnet")
                     .withPrimaryPrivateIPAddressDynamic()
                     .withExistingPrimaryPublicIPAddress(publicIPAddress)
+                    .withExistingNetworkSecurityGroup(networkSecurityGroup)
                     .create()
 
             // Creating virtual machine
@@ -133,7 +137,7 @@ class AzureServiceProvider {
                     .withRegion(regionFromString)
                     .withExistingResourceGroup(resourceGroup)
                     .withExistingPrimaryNetworkInterface(networkInterface)
-                    .withLatestLinuxImage("Canonical", "UbuntuServer", "18.04-LTS")
+                    .withLinuxCustomImage(imageId)
                     .withRootUsername("azureuser")
                     .withRootPassword("Azure12345678")
                     .withComputerName(name)

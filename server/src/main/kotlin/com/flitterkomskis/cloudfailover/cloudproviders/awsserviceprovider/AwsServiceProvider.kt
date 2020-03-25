@@ -151,11 +151,12 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
      * @param region The region in which to create the instance.
      * @return A handle to the instance that uniquely identifies it.
      */
-    fun createInstance(name: String, type: String, imageId: String, region: String): AwsInstanceHandle {
+    fun createInstance(name: String, type: String, imageId: String, region: String, securityGroup: String = "sg-0b7eba9f3e3d6f139"): AwsInstanceHandle {
         val client = getClient(region)
         val runRequest = RunInstancesRequest.builder()
                 .imageId(imageId)
                 .instanceType(InstanceType.valueOf(type))
+                .securityGroupIds(securityGroup)
                 .maxCount(1)
                 .minCount(1)
                 .build()

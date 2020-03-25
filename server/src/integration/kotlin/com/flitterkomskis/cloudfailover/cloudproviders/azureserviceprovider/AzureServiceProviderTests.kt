@@ -25,9 +25,9 @@ class AzureServiceProviderTests {
 
         val provider = Provider.AZURE
         val name = "test-instance1"
-        val type = "Standard_B1ls"
-        val imageId = "NULL"
-        val region = "Central US"
+        val type = "Standard_B1s"
+        val imageId = "/subscriptions/a6463554-97a5-4ff1-82a2-ab5e6e4ce861/resourceGroups/SeniorDesign/providers/Microsoft.Compute/images/last-test-please-image2-20200317164258"
+        val region = "East US 2"
 
         val handle = serviceProvider.createInstance(provider, name, type, imageId, region)
         val instances = serviceProvider.listInstances()
@@ -44,9 +44,9 @@ class AzureServiceProviderTests {
 
         val provider = Provider.AZURE
         val name = "test-instance2"
-        val type = "Standard_B1ls"
-        val imageId = "NULL"
-        val region = "Central US"
+        val type = "Standard_B1s"
+        val imageId = "/subscriptions/a6463554-97a5-4ff1-82a2-ab5e6e4ce861/resourceGroups/SeniorDesign/providers/Microsoft.Compute/images/last-test-please-image2-20200317164258"
+        val region = "East US 2"
 
         val handle = serviceProvider.createInstance(provider, name, type, imageId, region)
 

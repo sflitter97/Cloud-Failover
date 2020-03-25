@@ -31,7 +31,7 @@ class AwsServiceProviderTests {
         val provider = Provider.AWS
         val name = "Cloud failover test instance"
         val type = "T2_MICRO"
-        val imageId = "ami-02ccb28830b645a41"
+        val imageId = "ami-0eb7b63b42a6d7a6b"
         val region = "us-east-2"
 
         val handle = serviceProvider.createInstance(provider, name, type, imageId, region)
@@ -51,7 +51,7 @@ class AwsServiceProviderTests {
         val provider = Provider.AWS
         val name = "Cloud failover test instance"
         val type = "T2_MICRO"
-        val imageId = "ami-02ccb28830b645a41"
+        val imageId = "ami-0eb7b63b42a6d7a6b"
         val region = "us-east-2"
 
         val handle = serviceProvider.createInstance(provider, name, type, imageId, region)
