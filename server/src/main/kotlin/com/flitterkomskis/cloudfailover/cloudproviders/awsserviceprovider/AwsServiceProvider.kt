@@ -1,5 +1,6 @@
 package com.flitterkomskis.cloudfailover.cloudproviders.awsserviceprovider
 
+import com.flitterkomskis.cloudfailover.cloudproviders.InstanceHandle
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceInfo
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
 import com.flitterkomskis.cloudfailover.cloudproviders.Provider
@@ -128,7 +129,7 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
                             name,
                             instance.instanceType().toString(),
                             getInstanceState(instance.state().code()),
-                            AwsInstanceHandle(instance.instanceId(), region.toString()),
+                            InstanceHandle(instance.instanceId(), region.toString(), Provider.AWS),
                             instance.publicDnsName()
                         ))
                     }
@@ -151,7 +152,7 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
      * @param region The region in which to create the instance.
      * @return A handle to the instance that uniquely identifies it.
      */
-    fun createInstance(name: String, type: String, imageId: String, region: String, securityGroup: String = "sg-0b7eba9f3e3d6f139"): AwsInstanceHandle {
+    fun createInstance(name: String, type: String, imageId: String, region: String, securityGroup: String = "sg-0b7eba9f3e3d6f139"): InstanceHandle {
         val client = getClient(region)
         val runRequest = RunInstancesRequest.builder()
                 .imageId(imageId)
@@ -180,7 +181,7 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
         } catch (e: Ec2Exception) {
             throw AwsServiceProviderException("Error adding tags to instance.")
         }
-        return AwsInstanceHandle(instanceId, region)
+        return InstanceHandle(instanceId, region, Provider.AWS)
     }
 
     /**
@@ -188,7 +189,7 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
      * @param handle The handle that uniquely identifies the instance to be deleted.
      * @return True if the instance was successfully deleted and false otherwise.
      */
-    fun deleteInstance(handle: AwsInstanceHandle): Boolean {
+    fun deleteInstance(handle: InstanceHandle): Boolean {
         val client = getClient(handle.region)
 
         val terminateRequest = TerminateInstancesRequest.builder()
@@ -205,7 +206,7 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
      * @param handle The handle that uniquely identifies the instance to be started.
      * @return True if the instance was successfully started and false otherwise.
      */
-    fun startInstance(handle: AwsInstanceHandle): Boolean {
+    fun startInstance(handle: InstanceHandle): Boolean {
         val client = getClient(handle.region)
 
         val startRequest = StartInstancesRequest.builder()
@@ -222,7 +223,7 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
      * @param handle The handle that uniquely identifies the instance to be stopped.
      * @return True if the instance was successfully stopped and false otherwise.
      */
-    fun stopInstance(handle: AwsInstanceHandle): Boolean {
+    fun stopInstance(handle: InstanceHandle): Boolean {
         val client = getClient(handle.region)
 
         val stopRequest = StopInstancesRequest.builder()
@@ -239,7 +240,7 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
      * @param handle The handle that uniquely identifies the instance.
      * @return [InstanceInfo] describing the instance.
      */
-    fun getInstance(handle: AwsInstanceHandle): InstanceInfo {
+    fun getInstance(handle: InstanceHandle): InstanceInfo {
         logger.info("Getting instance for handle $handle")
         val client = getClient(handle.region)
         val getRequest: DescribeInstancesRequest = DescribeInstancesRequest.builder().instanceIds(handle.instanceId).build()
@@ -280,7 +281,7 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
      * @param timeout The maximum amount of time to wait for the instance to reach the state.
      * @return True if the instance reaches state before the timeout and false otherwise.
      */
-    fun waitForState(handle: AwsInstanceHandle, state: InstanceState, timeout: Int): Boolean {
+    fun waitForState(handle: InstanceHandle, state: InstanceState, timeout: Int): Boolean {
         val startTime = Instant.now()
         val timeoutTime = startTime.plusSeconds(timeout.toLong())
         var currTime = Instant.now()

@@ -1,5 +1,6 @@
 package com.flitterkomskis.cloudfailover.cloudproviders.azureserviceprovider
 
+import com.flitterkomskis.cloudfailover.cloudproviders.InstanceHandle
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceInfo
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
 import com.flitterkomskis.cloudfailover.cloudproviders.Provider
@@ -70,7 +71,7 @@ class AzureServiceProvider {
                                 it.name(),
                                 it.size().toString(),
                                 getInstanceState(it.powerState()),
-                                AzureInstanceHandle(it.name(), resourceGroup),
+                                InstanceHandle(it.name(), resourceGroup, Provider.AZURE),
                                 it.primaryNetworkInterface.toString()
                         )
                 )
@@ -96,7 +97,7 @@ class AzureServiceProvider {
      * @param region The region in which to create the instance.
      * @return A handle to the instance that uniquely identifies it.
      */
-    fun createInstance(name: String, type: String, imageId: String, region: String, ntwkSecGrp: String = "networking-rules-nsg"): AzureInstanceHandle {
+    fun createInstance(name: String, type: String, imageId: String, region: String, ntwkSecGrp: String = "networking-rules-nsg"): InstanceHandle {
         try {
             val regionFromString: Region = Region.findByLabelOrName(region)
             val networkSecurityGroup: NetworkSecurityGroup =
@@ -144,7 +145,7 @@ class AzureServiceProvider {
                     .withSize(type)
                     .create()
 
-            return AzureInstanceHandle(name, resourceGroup)
+            return InstanceHandle(name, resourceGroup, Provider.AZURE)
         } catch (e: Exception) {
             throw AzureServiceProviderException("Error creating instance ${e.message}")
         }
@@ -155,7 +156,7 @@ class AzureServiceProvider {
      * @param handle The handle that uniquely identifies the instance to be deleted.
      * @return True if the instance was successfully deleted and false otherwise.
      */
-    fun deleteInstance(handle: AzureInstanceHandle): Boolean {
+    fun deleteInstance(handle: InstanceHandle): Boolean {
         try {
             val vm =
                     azure.virtualMachines().getByResourceGroup(handle.region, handle.instanceId)
@@ -171,7 +172,7 @@ class AzureServiceProvider {
      * @param handle The handle that uniquely identifies the instance to be started.
      * @return True if the instance was successfully started and false otherwise.
      */
-    fun startInstance(handle: AzureInstanceHandle): Boolean {
+    fun startInstance(handle: InstanceHandle): Boolean {
         try {
             val vm =
                     azure.virtualMachines().getByResourceGroup(handle.region, handle.instanceId)
@@ -187,7 +188,7 @@ class AzureServiceProvider {
      * @param handle The handle that uniquely identifies the instance to be stopped.
      * @return True if the instance was successfully stopped and false otherwise.
      */
-    fun stopInstance(handle: AzureInstanceHandle): Boolean {
+    fun stopInstance(handle: InstanceHandle): Boolean {
         try {
             val vm =
                     azure.virtualMachines().getByResourceGroup(handle.region, handle.instanceId)
@@ -203,7 +204,7 @@ class AzureServiceProvider {
      * @param handle The handle that uniquely identifies the instance.
      * @return [InstanceInfo] describing the instance.
      */
-    fun getInstance(handle: AzureInstanceHandle): InstanceInfo {
+    fun getInstance(handle: InstanceHandle): InstanceInfo {
         try {
             val vm =
                     azure.virtualMachines().getByResourceGroup(handle.region, handle.instanceId)
@@ -227,7 +228,7 @@ class AzureServiceProvider {
      * @param timeout The maximum amount of time to wait for the instance to reach the state.
      * @return True if the instance reaches state before the timeout and false otherwise.
      */
-    fun waitForState(handle: AzureInstanceHandle, state: InstanceState, timeout: Int): Boolean {
+    fun waitForState(handle: InstanceHandle, state: InstanceState, timeout: Int): Boolean {
         val startTime = Instant.now()
         val timeoutTime = startTime.plusSeconds(timeout.toLong())
         var currTime = Instant.now()
