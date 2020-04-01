@@ -1,5 +1,6 @@
 package com.flitterkomskis.cloudfailover.cloudproviders.gcpserviceprovider
 
+import com.flitterkomskis.cloudfailover.cloudproviders.InstanceHandle
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceInfo
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
 import com.flitterkomskis.cloudfailover.cloudproviders.Provider
@@ -86,7 +87,7 @@ class GcpServiceProvider(private val projectId: String) {
                             instance.name,
                             instance.machineType,
                             getInstanceState(instance.status),
-                            GcpInstanceHandle(instance.name, zone),
+                            InstanceHandle(instance.name, zone, Provider.GCP),
                             instance.networkInterfaces.get(0).network
                     ))
                 }
@@ -151,7 +152,7 @@ class GcpServiceProvider(private val projectId: String) {
      * @param zone The region in which to create the instance.
      * @return A handle to the instance that uniquely identifies it.
      */
-    fun createInstance(name: String, type: String, image: String, zone: String): GcpInstanceHandle {
+    fun createInstance(name: String, type: String, image: String, zone: String): InstanceHandle {
         try {
             val disk = initializeDisk(image)
             val networkInterface = NetworkInterface()
@@ -167,7 +168,7 @@ class GcpServiceProvider(private val projectId: String) {
             val request = computeService.instances().insert(projectId, zone, requestBody)
             request.execute()
 
-            return GcpInstanceHandle(name, zone)
+            return InstanceHandle(name, zone, Provider.GCP)
         } catch (e: Exception) {
             throw GcpServiceProviderException("Error creating instance ${e.message}")
         }
@@ -178,7 +179,7 @@ class GcpServiceProvider(private val projectId: String) {
      * @param handle The handle that uniquely identifies the instance to be deleted.
      * @return True if the instance was successfully deleted and false otherwise.
      */
-    fun deleteInstance(handle: GcpInstanceHandle): Boolean {
+    fun deleteInstance(handle: InstanceHandle): Boolean {
         try {
             val request = computeService.instances().delete(projectId, handle.region, handle.instanceId)
             request.execute()
@@ -193,7 +194,7 @@ class GcpServiceProvider(private val projectId: String) {
      * @param handle The handle that uniquely identifies the instance to be started.
      * @return True if the instance was successfully started and false otherwise.
      */
-    fun startInstance(handle: GcpInstanceHandle): Boolean {
+    fun startInstance(handle: InstanceHandle): Boolean {
         try {
             val request: Compute.Instances.Start =
                 computeService.instances().start(projectId, handle.region, handle.instanceId)
@@ -209,7 +210,7 @@ class GcpServiceProvider(private val projectId: String) {
      * @param handle The handle that uniquely identifies the instance to be stopped.
      * @return True if the instance was successfully stopped and false otherwise.
      */
-    fun stopInstance(handle: GcpInstanceHandle): Boolean {
+    fun stopInstance(handle: InstanceHandle): Boolean {
         try {
             val request: Compute.Instances.Stop =
                 computeService.instances().stop(projectId, handle.region, handle.instanceId)
@@ -225,7 +226,7 @@ class GcpServiceProvider(private val projectId: String) {
      * @param handle The handle that uniquely identifies the instance.
      * @return [InstanceInfo] describing the instance.
      */
-    fun getInstance(handle: GcpInstanceHandle): InstanceInfo {
+    fun getInstance(handle: InstanceHandle): InstanceInfo {
         try {
             val request: Compute.Instances.Get =
                 computeService.instances().get(projectId, handle.region, handle.instanceId)
@@ -249,7 +250,7 @@ class GcpServiceProvider(private val projectId: String) {
      * @param timeout The maximum amount of time to wait for the instance to reach the state.
      * @return True if the instance reaches state before the timeout and false otherwise.
      */
-    fun waitForState(handle: GcpInstanceHandle, state: InstanceState, timeout: Int): Boolean {
+    fun waitForState(handle: InstanceHandle, state: InstanceState, timeout: Int): Boolean {
         val startTime = Instant.now()
         val timeoutTime = startTime.plusSeconds(timeout.toLong())
         var currTime = Instant.now()

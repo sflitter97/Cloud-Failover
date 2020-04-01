@@ -1,10 +1,7 @@
 package com.flitterkomskis.cloudfailover.cloudproviders
 
-import com.flitterkomskis.cloudfailover.cloudproviders.awsserviceprovider.AwsInstanceHandle
 import com.flitterkomskis.cloudfailover.cloudproviders.awsserviceprovider.AwsServiceProvider
-import com.flitterkomskis.cloudfailover.cloudproviders.azureserviceprovider.AzureInstanceHandle
 import com.flitterkomskis.cloudfailover.cloudproviders.azureserviceprovider.AzureServiceProvider
-import com.flitterkomskis.cloudfailover.cloudproviders.gcpserviceprovider.GcpInstanceHandle
 import com.flitterkomskis.cloudfailover.cloudproviders.gcpserviceprovider.GcpServiceProvider
 import javax.annotation.PostConstruct
 import kotlinx.coroutines.GlobalScope
@@ -87,19 +84,11 @@ class ServiceProvider {
      * @return The [InstanceInfo] for the given handle.
      */
     fun getInstance(handle: InstanceHandle): InstanceInfo {
-        return handle.acceptGetInstance(this)
-    }
-
-    fun getInstance(handle: AwsInstanceHandle): InstanceInfo {
-        return awsProvider?.getInstance(handle) ?: throw ServiceProviderException(AWS_NOT_INITIALIZED_MESSAGE)
-    }
-
-    fun getInstance(handle: GcpInstanceHandle): InstanceInfo {
-        return gcpProvider?.getInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
-    }
-
-    fun getInstance(handle: AzureInstanceHandle): InstanceInfo {
-        return azureProvider?.getInstance(handle) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
+        return when (handle.provider) {
+            Provider.GCP -> gcpProvider?.getInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
+            Provider.AWS ->awsProvider?.getInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
+            Provider.AZURE -> azureProvider?.getInstance(handle)  ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
+        }
     }
 
     /**
@@ -127,19 +116,11 @@ class ServiceProvider {
      * @return The [InstanceInfo] for the given handle.
      */
     fun deleteInstance(handle: InstanceHandle): Boolean {
-        return handle.acceptDeleteInstance(this)
-    }
-
-    fun deleteInstance(handle: AwsInstanceHandle): Boolean {
-        return awsProvider?.deleteInstance(handle) ?: throw ServiceProviderException(AWS_NOT_INITIALIZED_MESSAGE)
-    }
-
-    fun deleteInstance(handle: GcpInstanceHandle): Boolean {
-        return gcpProvider?.deleteInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
-    }
-
-    fun deleteInstance(handle: AzureInstanceHandle): Boolean {
-        return azureProvider?.deleteInstance(handle) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
+        return when (handle.provider) {
+            Provider.GCP -> gcpProvider?.deleteInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
+            Provider.AWS -> awsProvider?.deleteInstance(handle) ?: throw ServiceProviderException(AWS_NOT_INITIALIZED_MESSAGE)
+            Provider.AZURE -> azureProvider?.deleteInstance(handle) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
+        }
     }
 
     /**
@@ -149,19 +130,11 @@ class ServiceProvider {
      * @return The [InstanceInfo] for the given handle.
      */
     fun startInstance(handle: InstanceHandle): Boolean {
-        return handle.acceptStartInstance(this)
-    }
-
-    fun startInstance(handle: AwsInstanceHandle): Boolean {
-        return awsProvider?.startInstance(handle) ?: throw ServiceProviderException(AWS_NOT_INITIALIZED_MESSAGE)
-    }
-
-    fun startInstance(handle: GcpInstanceHandle): Boolean {
-        return gcpProvider?.startInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
-    }
-
-    fun startInstance(handle: AzureInstanceHandle): Boolean {
-        return azureProvider?.startInstance(handle) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
+        return when (handle.provider) {
+            Provider.GCP -> gcpProvider?.startInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
+            Provider.AWS -> awsProvider?.startInstance(handle) ?: throw ServiceProviderException(AWS_NOT_INITIALIZED_MESSAGE)
+            Provider.AZURE -> azureProvider?.startInstance(handle) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
+        }
     }
 
     /**
@@ -171,19 +144,11 @@ class ServiceProvider {
      * @return The [InstanceInfo] for the given handle.
      */
     fun stopInstance(handle: InstanceHandle): Boolean {
-        return handle.acceptStopInstance(this)
-    }
-
-    fun stopInstance(handle: AwsInstanceHandle): Boolean {
-        return awsProvider?.stopInstance(handle) ?: throw ServiceProviderException(AWS_NOT_INITIALIZED_MESSAGE)
-    }
-
-    fun stopInstance(handle: GcpInstanceHandle): Boolean {
-        return gcpProvider?.stopInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
-    }
-
-    fun stopInstance(handle: AzureInstanceHandle): Boolean {
-        return azureProvider?.stopInstance(handle) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
+        return when (handle.provider) {
+            Provider.GCP -> gcpProvider?.stopInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
+            Provider.AWS -> awsProvider?.stopInstance(handle) ?: throw ServiceProviderException(AWS_NOT_INITIALIZED_MESSAGE)
+            Provider.AZURE -> azureProvider?.stopInstance(handle) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
+        }
     }
 
     /**
@@ -196,18 +161,10 @@ class ServiceProvider {
      * @return True if the instance reaches the given state by the timeout and false otherwise.
      */
     fun waitForState(handle: InstanceHandle, state: InstanceState, timeout: Int = 300): Boolean {
-        return handle.acceptWaitForState(this, state, timeout)
-    }
-
-    fun waitForState(handle: AwsInstanceHandle, state: InstanceState, timeout: Int): Boolean {
-        return awsProvider?.waitForState(handle, state, timeout) ?: throw ServiceProviderException(AWS_NOT_INITIALIZED_MESSAGE)
-    }
-
-    fun waitForState(handle: GcpInstanceHandle, state: InstanceState, timeout: Int): Boolean {
-        return gcpProvider?.waitForState(handle, state, timeout) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
-    }
-
-    fun waitForState(handle: AzureInstanceHandle, state: InstanceState, timeout: Int): Boolean {
-        return azureProvider?.waitForState(handle, state, timeout) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
+        return when (handle.provider) {
+            Provider.GCP -> gcpProvider?.waitForState(handle, state, timeout) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
+            Provider.AWS -> awsProvider?.waitForState(handle, state, timeout) ?: throw ServiceProviderException(AWS_NOT_INITIALIZED_MESSAGE)
+            Provider.AZURE -> azureProvider?.waitForState(handle, state, timeout) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
+        }
     }
 }

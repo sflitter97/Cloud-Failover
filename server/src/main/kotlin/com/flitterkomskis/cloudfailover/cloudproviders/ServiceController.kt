@@ -8,6 +8,8 @@ import org.springframework.hateoas.CollectionModel
 import org.springframework.hateoas.EntityModel
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -61,9 +63,15 @@ class ServiceController {
      * @param request [CreateInstanceRequest] with the details of the instance to create.
      */
     @PostMapping("")
-    fun createInstance(@RequestBody request: CreateInstanceRequest) {
-        logger.info("Request to create instance with payload $request")
-        serviceProvider.createInstance(request.provider, request.name, request.type, request.imageId, request.region)
+    fun createInstance(@RequestBody request: CreateInstanceRequest): ResponseEntity<String> {
+        try {
+            logger.info("Request to create instance with payload $request")
+            serviceProvider.createInstance(request.provider, request.name, request.type, request.imageId, request.region)
+            return ResponseEntity<String>("", HttpHeaders(), HttpStatus.CREATED)
+        } catch(e: Exception) {
+            e.printStackTrace()
+            return ResponseEntity("", HttpHeaders(), HttpStatus.BAD_REQUEST)
+        }
     }
 
     /**
