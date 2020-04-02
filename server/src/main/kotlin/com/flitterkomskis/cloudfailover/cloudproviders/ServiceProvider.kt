@@ -6,6 +6,8 @@ import com.flitterkomskis.cloudfailover.cloudproviders.gcpserviceprovider.GcpSer
 import javax.annotation.PostConstruct
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -16,7 +18,7 @@ import org.springframework.stereotype.Service
  * point of access for manipulating instances.
  */
 @Service
-class ServiceProvider {
+class ServiceProvider() {
     private val logger: Logger = LoggerFactory.getLogger(ServiceProvider::class.java)
     private val AWS_NOT_INITIALIZED_MESSAGE = "AWS not initialized."
     private val GCP_NOT_INITIALIZED_MESSAGE = "GCP not initialized."
@@ -25,24 +27,23 @@ class ServiceProvider {
     private var gcpProvider: GcpServiceProvider? = null
     private var azureProvider: AzureServiceProvider? = null
 
-    @PostConstruct
-    fun initServiceProviders() {
+    init {
         initAws(System.getenv("AWS_ACCESS_KEY"), System.getenv("AWS_SECRET_KEY"))
         initGcp(System.getenv("GCP_PROJECT"))
         initAzure()
     }
 
-    fun initAws(accessKey: String, secretKey: String) {
+    final fun initAws(accessKey: String, secretKey: String) {
         awsProvider = AwsServiceProvider(accessKey, secretKey)
         logger.info("AWS initialized")
     }
 
-    fun initGcp(projectId: String) {
+    final fun initGcp(projectId: String) {
         gcpProvider = GcpServiceProvider(projectId)
         logger.info("GCP initialized")
     }
 
-    fun initAzure() {
+    final fun initAzure() {
         azureProvider = AzureServiceProvider()
         logger.info("AZURE initialized")
     }
@@ -88,6 +89,18 @@ class ServiceProvider {
             Provider.GCP -> gcpProvider?.getInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
             Provider.AWS ->awsProvider?.getInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
             Provider.AZURE -> azureProvider?.getInstance(handle)  ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
+        }
+    }
+
+    fun getInstances(handles: List<InstanceHandle>): List<InstanceInfo> {
+        return runBlocking {
+            coroutineScope {
+                handles.map {
+                    async {
+                        getInstance(it)
+                    }
+                }
+            }.awaitAll()
         }
     }
 

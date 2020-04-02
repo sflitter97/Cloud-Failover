@@ -1,5 +1,6 @@
 package com.flitterkomskis.cloudfailover.cluster
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceHandle
 import java.util.UUID
 import org.slf4j.Logger
@@ -31,13 +32,15 @@ class ClusterController {
     private val logger: Logger = LoggerFactory.getLogger(ClusterController::class.java)
     @Autowired private lateinit var clusterService: ClusterService
     @Autowired private lateinit var assembler: ClusterModelAssembler
+    @Autowired private lateinit var membershipAssembler: ClusterMembershipAssembler
+    private val mapper = jacksonObjectMapper()
 
     /**
      * Returns a list of all clusters from the [ClusterService].
      * @return A [CollectionModel] of [EntityModel] of [Cluster]s in the repository.
      */
     @GetMapping("")
-    fun getClusters(): CollectionModel<EntityModel<Cluster>> {
+    fun getClusters(): CollectionModel<EntityModel<ClusterModel>> {
         logger.info(clusterService.listClusters().toString())
         val clusters = clusterService.listClusters()
         return CollectionModel(clusters.map { cluster ->
@@ -53,7 +56,7 @@ class ClusterController {
      * @return A [Cluster] with the given id.
      */
     @GetMapping("/{id}")
-    fun getCluster(@PathVariable id: UUID): EntityModel<Cluster> {
+    fun getCluster(@PathVariable id: UUID): EntityModel<ClusterModel> {
         return assembler.toModel(clusterService.getCluster(id))
     }
 
@@ -66,7 +69,7 @@ class ClusterController {
      * @return The created [Cluster].
      */
     @PostMapping("")
-    fun createCluster(@RequestBody payload: Map<String, Any>): EntityModel<Cluster> {
+    fun createCluster(@RequestBody payload: Map<String, Any>): EntityModel<ClusterModel> {
         return assembler.toModel(clusterService.createCluster(payload))
     }
 
@@ -80,7 +83,7 @@ class ClusterController {
      * @return The updated [Cluster].
      */
     @PatchMapping("/{id}")
-    fun editCluster(@PathVariable id: UUID, @RequestBody payload: Map<String, Any>): EntityModel<Cluster> {
+    fun editCluster(@PathVariable id: UUID, @RequestBody payload: Map<String, Any>): EntityModel<ClusterModel> {
         logger.info("Patch request for cluster $id with payload $payload")
         return assembler.toModel(clusterService.updateCluster(id, payload))
     }
@@ -102,7 +105,7 @@ class ClusterController {
      * @return The [Cluster] after the instance has been added.
      */
     @PostMapping("/{id}/instances")
-    fun addInstance(@PathVariable id: UUID, @RequestBody handle: InstanceHandle): EntityModel<Cluster> {
+    fun addInstance(@PathVariable id: UUID, @RequestBody handle: InstanceHandle): EntityModel<ClusterModel> {
         return assembler.toModel(clusterService.addInstance(id, handle))
     }
 
@@ -113,7 +116,38 @@ class ClusterController {
      * @return The [Cluster] after the instance has been removed.
      */
     @DeleteMapping("/{id}/instances")
-    fun deleteInstance(@PathVariable id: UUID, @RequestBody handle: InstanceHandle): EntityModel<Cluster> {
+    fun deleteInstance(@PathVariable id: UUID, @RequestBody handle: InstanceHandle): EntityModel<ClusterModel> {
         return assembler.toModel(clusterService.removeInstance(id, handle))
+    }
+
+    @GetMapping("/used_instances")
+    fun getUsedInstances(): CollectionModel<InstanceHandle> {
+        val instances = clusterService.getUsedInstances()
+        return CollectionModel(instances)
+    }
+
+    @GetMapping("/{id}/instances")
+    fun getInstances(@PathVariable id: UUID): CollectionModel<EntityModel<ClusterMembership>> {
+        val cluster = clusterService.getCluster(id)
+        return CollectionModel(cluster.instances.map {
+            membershipAssembler.toModel(id, it)
+        },
+            linkTo(methodOn(ClusterController::class.java).getInstances(id)).withSelfRel()
+        )
+    }
+
+    @GetMapping("/{id}/instances/{handle}")
+    fun getInstance(@PathVariable id: UUID, @PathVariable handle: String): EntityModel<ClusterMembership> {
+        val instanceHandle = mapper.readValue(handle, InstanceHandle::class.java)
+        val cluster = clusterService.getCluster(id)
+        return membershipAssembler.toModel(id, cluster.instances.first { it.handle == instanceHandle })
+    }
+
+    @PatchMapping("/{id}/instances/{handle}")
+    fun editInstance(@PathVariable id: UUID, @PathVariable handle: String, @RequestBody payload: Map<String, Any>): EntityModel<ClusterMembership> {
+        val instanceHandle = mapper.readValue(handle, InstanceHandle::class.java)
+        clusterService.editInstance(id, instanceHandle, payload)
+        val cluster = clusterService.getCluster(id)
+        return membershipAssembler.toModel(id, cluster.instances.first { it.handle == instanceHandle })
     }
 }

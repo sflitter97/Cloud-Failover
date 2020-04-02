@@ -1,5 +1,6 @@
 package com.flitterkomskis.cloudfailover.cloudproviders.azureserviceprovider
 
+import com.flitterkomskis.cloudfailover.cloudproviders.InstanceDeletedException
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceHandle
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceInfo
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
@@ -207,15 +208,17 @@ class AzureServiceProvider {
     fun getInstance(handle: InstanceHandle): InstanceInfo {
         try {
             val vm =
-                    azure.virtualMachines().getByResourceGroup(handle.region, handle.instanceId)
+                azure.virtualMachines().getByResourceGroup(handle.region, handle.instanceId)
             return InstanceInfo(
-                    Provider.AZURE,
-                    handle.instanceId,
-                    vm.size().toString(),
-                    getInstanceState(vm.powerState()),
-                    handle,
-                    vm.primaryPublicIPAddress.ipAddress() ?: ""
+                Provider.AZURE,
+                handle.instanceId,
+                vm.size().toString(),
+                getInstanceState(vm.powerState()),
+                handle,
+                vm.primaryPublicIPAddress.ipAddress() ?: ""
             )
+        } catch (e: NullPointerException) {
+            throw InstanceDeletedException(e.message ?: "")
         } catch (e: Exception) {
             throw AzureServiceProviderException("Error getting instance ${e.message}")
         }

@@ -15,7 +15,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder
  * the REST API.
  */
 @Component
-class ClusterModelAssembler : RepresentationModelAssembler<Cluster, EntityModel<Cluster>> {
+class ClusterModelAssembler : RepresentationModelAssembler<Cluster, EntityModel<ClusterModel>> {
     private val logger: Logger = LoggerFactory.getLogger(ClusterModelAssembler::class.java)
 
     /**
@@ -23,10 +23,11 @@ class ClusterModelAssembler : RepresentationModelAssembler<Cluster, EntityModel<
      * @param entity The cluster to convert.
      * @return The [EntityModel] of entity.
      */
-    override fun toModel(entity: Cluster): EntityModel<Cluster> {
+    override fun toModel(entity: Cluster): EntityModel<ClusterModel> {
         logger.info(ServletUriComponentsBuilder.fromCurrentRequest().build().toString())
         val host = ServletUriComponentsBuilder.fromCurrentRequestUri().replacePath(null)
-        return EntityModel(entity,
+        val model = ClusterModel(entity)
+        return EntityModel(model,
             linkTo(methodOn(ClusterController::class.java).getCluster(entity.id)).withSelfRel(),
             linkTo(ClusterController::class.java).slash(entity.id).slash("instances").withRel("instances"),
             Link(host.path("/api/access/${entity.id}/").build().toUriString(), "access"),

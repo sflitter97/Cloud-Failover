@@ -47,7 +47,7 @@ class TrafficController {
     }
 
     @PutMapping("/{id}")
-    fun switchCurrentCloudProvider(@PathVariable id: UUID, @RequestBody handle: InstanceHandle): EntityModel<Cluster> {
+    fun switchCurrentCloudProvider(@PathVariable id: UUID, @RequestBody handle: InstanceHandle): EntityModel<ClusterModel> {
         logger.info("Change access instance for cluster $id to $handle")
         val cluster = clusterService.getCluster(id)
         cluster.accessInstance = handle

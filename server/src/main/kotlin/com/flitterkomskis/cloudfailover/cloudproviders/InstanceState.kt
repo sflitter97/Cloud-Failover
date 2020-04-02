@@ -17,5 +17,9 @@ enum class InstanceState {
     TERMINATED,
     DEALLOCATED,
     DEALLOCATING,
-    STARTING
+    STARTING;
+
+    companion object {
+        val StoppingInstanceStates = hashSetOf(STOPPED, STOPPING, DELETED, DELETING, TERMINATED, DEALLOCATED, DEALLOCATING)
+    }
 }

@@ -1,5 +1,6 @@
 package com.flitterkomskis.cloudfailover.cluster
 
+import com.flitterkomskis.cloudfailover.cloudproviders.ServiceProvider
 import com.flitterkomskis.cloudfailover.reverseproxy.DynamicRoutingService
 import com.mongodb.internal.connection.tlschannel.util.Util.assertTrue
 import java.util.UUID
@@ -35,6 +36,8 @@ class ClusterServiceTests {
 
     @Mock
     private lateinit var routingService: DynamicRoutingService
+    @Mock
+    private lateinit var serviceProvider: ServiceProvider
 
     // from https://medium.com/@elye.project/befriending-kotlin-and-mockito-1c2e7b0ef791
     private fun <T> any(): T {
@@ -91,6 +94,32 @@ class ClusterServiceTests {
         assertDoesNotThrow { clusterService.getCluster(cluster.id) }
         assertTrue(clusterService.deleteCluster(cluster.id))
         assertFalse(clusterService.deleteCluster(cluster.id))
+    }
+
+    @Test
+    fun addResponseTime_WhenManyRequests_TakesOneEveryTwoSeconds() {
+        val cluster = clusterService.createCluster(mapOf("name" to "clusterName"))
+        clusterService.addResponseTime(cluster.id, 10)
+        clusterService.addResponseTime(cluster.id, 10)
+        clusterService.addResponseTime(cluster.id, 10)
+        clusterService.addResponseTime(cluster.id, 10)
+        clusterService.addResponseTime(cluster.id, 10)
+
+        var info = clusterService.getResponseTimeInfo(cluster.id)
+        logger.info(info.toString())
+        assertThat(info.requestCount).isEqualTo(1)
+
+        Thread.sleep(2000L)
+        clusterService.addResponseTime(cluster.id, 10)
+        info = clusterService.getResponseTimeInfo(cluster.id)
+        logger.info(info.toString())
+        assertThat(info.requestCount).isEqualTo(2)
+    }
+
+    @Test
+    fun addResponseTime_WhenManyFlags_TransitionCluster() {
+        val cluster = clusterService.createCluster(mapOf("name" to "clusterName"))
+
     }
 
     @Test

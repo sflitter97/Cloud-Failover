@@ -67,7 +67,7 @@ class ClusterDetails extends React.Component<ClusterDetailsProps, ClusterDetails
     .catch(console.log)
 
     let res2 = Promise.resolve()
-    if(accessInstance !== undefined) {
+    if(!(deepEqual(accessInstance, this.state.selectedCluster.accessInstance))) {
       res2 = fetch(this.state.selectedCluster._links.traffic.href, {
         method: 'PUT',
         headers: {

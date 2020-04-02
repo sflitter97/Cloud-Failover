@@ -1,11 +1,13 @@
 package com.flitterkomskis.cloudfailover.cloudproviders.gcpserviceprovider
 
+import com.flitterkomskis.cloudfailover.cloudproviders.InstanceDeletedException
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceHandle
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceInfo
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
 import com.flitterkomskis.cloudfailover.cloudproviders.Provider
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
+import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.http.HttpTransport
 import com.google.api.client.json.JsonFactory
 import com.google.api.client.json.jackson2.JacksonFactory
@@ -140,7 +142,7 @@ class GcpServiceProvider(private val projectId: String) {
             } while (response.nextPageToken != null)
             return instances
         } catch (e: Exception) {
-            throw GcpServiceProviderException("Error listing instances.")
+            throw GcpServiceProviderException("Error listing instances ${e.message}.")
         }
     }
 
@@ -237,9 +239,14 @@ class GcpServiceProvider(private val projectId: String) {
                 response.machineType,
                 getInstanceState(response.status),
                 handle,
-                response.networkInterfaces.get(0).network)
-        } catch (e: Exception) {
-            throw GcpServiceProviderException("Error getting instance.")
+                response.networkInterfaces[0].network
+            )
+        } catch(e: GoogleJsonResponseException) {
+            if(e.statusCode == 404) {
+                throw InstanceDeletedException(e.message ?: "")
+            } else {
+                throw GcpServiceProviderException("Error getting instance ${e.message}.")
+            }
         }
     }
 

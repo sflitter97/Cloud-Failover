@@ -35,7 +35,7 @@ class ClusterForm extends React.Component<ClusterFormProps, ClusterFormState> {
         instances: props.cluster?.instances || Array<{}>(),
         targetPort: props.cluster?.targetPort || 0,
         targetPath: props.cluster?.targetPath || "",
-        accessInstance: undefined
+        accessInstance: props.cluster?.accessInstance
       },
       instanceInfos: Array<Instance>()
     }
@@ -96,6 +96,16 @@ class ClusterForm extends React.Component<ClusterFormProps, ClusterFormState> {
     })
   }
 
+  generateSelectOptions() {
+    let options = this.state.formControls.instances.map(instance => {
+      const info = this.state.instanceInfos.find(value => deepEqual(value.handle, instance))
+      return <option key={JSON.stringify(instance)} value={JSON.stringify(instance)}>{`Provider: ${info?.provider || ""} Name: ${info?.name || ""}`}</option>
+    })
+    options.unshift(<option key={"please-select"} value={"please-select"} disabled={true}>Please Select</option>)
+
+    return options
+  }
+
   render() {
     return (
       <div className={styles.clusterForm}>
@@ -108,11 +118,8 @@ class ClusterForm extends React.Component<ClusterFormProps, ClusterFormState> {
             </Form.Group>
             <Form.Group controlId="clusterForm.ControlClusterAccessInstance">
               <Form.Label>Access Instance</Form.Label>
-              <Form.Control name="accessInstance" as="select" defaultValue={JSON.stringify(this.props.cluster?.accessInstance)} onChange={this.handleChange}>
-                {this.state.formControls.instances.map(instance => {
-                  const info = this.state.instanceInfos.find(value => deepEqual(value.handle, instance))
-                  return <option key={JSON.stringify(instance)} value={JSON.stringify(instance)}>{`Provider: ${info?.provider || ""} Name: ${info?.name || ""}`}</option>
-                })}
+              <Form.Control name="accessInstance" as="select" defaultValue={this.props.cluster?.accessInstance !== undefined ? JSON.stringify(this.props.cluster?.accessInstance) : "please-select"} onChange={this.handleChange}>
+                { this.generateSelectOptions() }
               </Form.Control>
             </Form.Group>
             <Form.Group controlId="clusterForm.ControlClusterPort">
