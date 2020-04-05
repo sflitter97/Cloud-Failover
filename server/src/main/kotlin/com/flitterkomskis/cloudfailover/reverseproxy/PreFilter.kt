@@ -2,13 +2,13 @@ package com.flitterkomskis.cloudfailover.reverseproxy
 
 import com.netflix.zuul.ZuulFilter
 import com.netflix.zuul.context.RequestContext
+import java.time.Instant
 import javax.servlet.http.HttpServletRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.cloud.netflix.zuul.filters.support.FilterConstants.PRE_DECORATION_FILTER_ORDER
 import org.springframework.cloud.netflix.zuul.filters.support.FilterConstants.PRE_TYPE
 import org.springframework.stereotype.Component
-import java.time.Instant
 
 /**
  * Filter for the Zuul proxy before requests are forwarded. Logs requests as they are made for

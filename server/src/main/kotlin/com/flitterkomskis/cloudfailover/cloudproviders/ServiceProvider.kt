@@ -3,7 +3,6 @@ package com.flitterkomskis.cloudfailover.cloudproviders
 import com.flitterkomskis.cloudfailover.cloudproviders.awsserviceprovider.AwsServiceProvider
 import com.flitterkomskis.cloudfailover.cloudproviders.azureserviceprovider.AzureServiceProvider
 import com.flitterkomskis.cloudfailover.cloudproviders.gcpserviceprovider.GcpServiceProvider
-import javax.annotation.PostConstruct
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -87,8 +86,8 @@ class ServiceProvider() {
     fun getInstance(handle: InstanceHandle): InstanceInfo {
         return when (handle.provider) {
             Provider.GCP -> gcpProvider?.getInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
-            Provider.AWS ->awsProvider?.getInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
-            Provider.AZURE -> azureProvider?.getInstance(handle)  ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
+            Provider.AWS -> awsProvider?.getInstance(handle) ?: throw ServiceProviderException(GCP_NOT_INITIALIZED_MESSAGE)
+            Provider.AZURE -> azureProvider?.getInstance(handle) ?: throw ServiceProviderException(AZURE_NOT_INITIALIZED_MESSAGE)
         }
     }
 

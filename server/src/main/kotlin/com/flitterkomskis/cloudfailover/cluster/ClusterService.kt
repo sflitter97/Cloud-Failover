@@ -7,30 +7,23 @@ import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
 import com.flitterkomskis.cloudfailover.cloudproviders.ServiceProvider
 import com.flitterkomskis.cloudfailover.reverseproxy.DynamicRoutingService
 import java.lang.IllegalArgumentException
+import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.context.event.EventListener
-import org.springframework.data.mongodb.core.query.Criteria
-import org.springframework.data.mongodb.core.query.Query
-import org.springframework.data.mongodb.core.query.Update
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
-import java.time.Instant
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import kotlin.concurrent.read
-import kotlin.concurrent.withLock
-import kotlin.concurrent.write
-import kotlin.math.abs
 
 /**
  * Provides a generic interface for the service layer below the [ClusterController].
@@ -93,6 +86,8 @@ interface ClusterService {
     fun editInstance(id: UUID, handle: InstanceHandle, payload: Map<String, Any>): ClusterMembership
 
     fun addResponseTime(id: UUID, time: Long)
+
+    fun flagRequest(id: UUID)
 }
 
 /**
@@ -105,19 +100,20 @@ class ClusterServiceImpl : ClusterService {
     @Autowired private lateinit var routingService: DynamicRoutingService
     @Autowired private lateinit var serviceProvider: ServiceProvider
     private val coroutineScope = CoroutineScope(Job() + Dispatchers.Default)
-    private val ALPHA: Double = 1.0/8.0
-    private val BETA: Double = 1.0/4.0
-    private val addResponseTimeLocks: ConcurrentHashMap<UUID, ReentrantReadWriteLock> = ConcurrentHashMap()
+    private val ALPHA: Double = 1.0 / 8.0
+    private val BETA: Double = 1.0 / 4.0
+    private val addResponseTimeLocks: ConcurrentHashMap<UUID, Mutex> = ConcurrentHashMap()
     private val clusterResponseTimeInfos: ConcurrentHashMap<UUID, ClusterResponseTimeInfo> = ConcurrentHashMap()
-    //private val clusterTransitionLocks: ConcurrentHashMap<UUID, ReentrantReadWriteLock> = ConcurrentHashMap()
+    var minRequestCount = 10
+    var addResponseTimeInterval = 2000L
+    var transitionInterval = 300000L
 
     @EventListener
     fun initialize(event: ContextRefreshedEvent) {
         val clusters = listClusters()
         clusters.forEach {
-            addResponseTimeLocks[it.id] = ReentrantReadWriteLock(true)
+            addResponseTimeLocks[it.id] = Mutex()
             clusterResponseTimeInfos[it.id] = ClusterResponseTimeInfo()
-            //clusterTransitionLocks[it.id] = ReentrantLock()
         }
     }
 
@@ -176,6 +172,25 @@ class ClusterServiceImpl : ClusterService {
             } else if (key == "targetPath" && value is String) {
                 logger.info("Setting $key to $value")
                 cluster.targetPath = value
+            } else if (key == "accessInstance" && value is Map<*, *>) {
+                val mapper = jacksonObjectMapper()
+                val handle = mapper.convertValue(value, InstanceHandle::class.java)
+                logger.info("Setting $key to $value")
+                cluster.accessInstance = handle
+            } else if (key == "backupInstance" && value is Map<*, *>) {
+                val mapper = jacksonObjectMapper()
+                val handle = mapper.convertValue(value, InstanceHandle::class.java)
+                logger.info("Setting $key to $value")
+                cluster.backupInstance = handle
+            } else if (key == "enableInstanceStateManagement" && value is String) {
+                logger.info("Setting $key to $value")
+                cluster.enableInstanceStateManagement = value.toBoolean()
+            } else if (key == "enableHotBackup" && value is String) {
+                logger.info("Setting $key to $value")
+                cluster.enableHotBackup = value.toBoolean()
+            } else if (key == "enableAutomaticPriorityAdjustment" && value is String) {
+                logger.info("Setting $key to $value")
+                cluster.enableAutomaticPriorityAdjustment = value.toBoolean()
             }
         }
         return cluster
@@ -190,9 +205,10 @@ class ClusterServiceImpl : ClusterService {
         var cluster = Cluster()
         cluster = updateClusterFromPayload(cluster, payload)
         clusterRepository.save(cluster)
-        addResponseTimeLocks[cluster.id] = ReentrantReadWriteLock(true)
+        addResponseTimeLocks[cluster.id] = Mutex()
         clusterResponseTimeInfos[cluster.id] = ClusterResponseTimeInfo()
-        manageInstanceStates(cluster)
+        val getTopTwo = !payload.containsKey("accessInstance") && !payload.containsKey("backupInstance")
+        manageInstanceStates(cluster, getTopTwo)
         return cluster
     }
 
@@ -204,16 +220,19 @@ class ClusterServiceImpl : ClusterService {
      * @return The updated [Cluster].
      */
     override fun updateCluster(id: UUID, payload: Map<String, Any>): Cluster {
-        return addResponseTimeLocks[id]?.write {
-            var cluster = getCluster(id)
-            cluster = updateClusterFromPayload(cluster, payload)
-            clusterRepository.save(cluster)
-            if (payload.containsKey("targetPort") || payload.containsKey("targetPath")) {
-                routingService.updateDynamicRoute(cluster)
-            }
-            manageInstanceStates(cluster)
-            cluster
-        } ?: throw ClusterServiceException("ID $id not found in addResponseTimeLocks")
+        return runBlocking {
+            addResponseTimeLocks[id]?.withLock {
+                var cluster = getCluster(id)
+                cluster = updateClusterFromPayload(cluster, payload)
+                clusterRepository.save(cluster)
+                if (payload.containsKey("targetPort") || payload.containsKey("targetPath")) {
+                    routingService.updateDynamicRoute(cluster)
+                }
+                val getTopTwo = !payload.containsKey("accessInstance") && !payload.containsKey("backupInstance")
+                manageInstanceStates(cluster, getTopTwo)
+                cluster
+            } ?: throw ClusterServiceException("ID $id not found in addResponseTimeLocks")
+        }
     }
 
     /**
@@ -223,18 +242,20 @@ class ClusterServiceImpl : ClusterService {
      * @return The [Cluster] after the instance has been added.
      */
     override fun addInstance(id: UUID, handle: InstanceHandle): Cluster {
-        return addResponseTimeLocks[id]?.write {
-            val cluster = getCluster(id)
-            if (getUsedInstances().contains(handle)) {
-                logger.warn("Cannot add $handle to cluster $id, it is already used by another cluster.")
-                return cluster
-            }
-            cluster.addInstance(handle)
-            logger.info("Added $handle to cluster $id")
-            clusterRepository.save(cluster)
-            manageInstanceStates(cluster)
-            cluster
-        } ?: throw ClusterServiceException("ID $id not found in addResponseTimeLocks")
+        return runBlocking {
+            addResponseTimeLocks[id]?.withLock {
+                val cluster = getCluster(id)
+                if (getUsedInstances().contains(handle)) {
+                    logger.warn("Cannot add $handle to cluster $id, it is already used by another cluster.")
+                    return@runBlocking cluster
+                }
+                cluster.addInstance(handle)
+                logger.info("Added $handle to cluster $id")
+                clusterRepository.save(cluster)
+                manageInstanceStates(cluster)
+                cluster
+            } ?: throw ClusterServiceException("ID $id not found in addResponseTimeLocks")
+        }
     }
 
     /**
@@ -244,14 +265,16 @@ class ClusterServiceImpl : ClusterService {
      * @return The [Cluster] after the instance has been removed.
      */
     override fun removeInstance(id: UUID, handle: InstanceHandle): Cluster {
-        return addResponseTimeLocks[id]?.write {
-            val cluster = getCluster(id)
-            cluster.removeInstance(handle)
-            logger.info("Removed $handle from cluster $id")
-            clusterRepository.save(cluster)
-            manageInstanceStates(cluster)
-            cluster
-        } ?: throw ClusterServiceException("ID $id not found in addResponseTimeLocks")
+        return runBlocking {
+            addResponseTimeLocks[id]?.withLock {
+                val cluster = getCluster(id)
+                cluster.removeInstance(handle)
+                logger.info("Removed $handle from cluster $id")
+                clusterRepository.save(cluster)
+                manageInstanceStates(cluster)
+                cluster
+            } ?: throw ClusterServiceException("ID $id not found in addResponseTimeLocks")
+        }
     }
 
     /**
@@ -261,13 +284,15 @@ class ClusterServiceImpl : ClusterService {
      * @return The [Cluster] after the access instance has been set.
      */
     override fun setAccessInstance(id: UUID, handle: InstanceHandle): Cluster {
-        return addResponseTimeLocks[id]?.write {
-            val cluster = getCluster(id)
-            cluster.accessInstance = handle
-            logger.info("Set $handle as access instance for cluster $id")
-            clusterRepository.save(cluster)
-            cluster
-        } ?: throw ClusterServiceException("ID $id not found in addResponseTimeLocks")
+        return runBlocking {
+            addResponseTimeLocks[id]?.withLock {
+                val cluster = getCluster(id)
+                cluster.accessInstance = handle
+                logger.info("Set $handle as access instance for cluster $id")
+                clusterRepository.save(cluster)
+                cluster
+            } ?: throw ClusterServiceException("ID $id not found in addResponseTimeLocks")
+        }
     }
 
     /**
@@ -276,18 +301,20 @@ class ClusterServiceImpl : ClusterService {
      * @return True if the cluster was deleted successfully of false otherwise.
      */
     override fun deleteCluster(id: UUID): Boolean {
-        return addResponseTimeLocks[id]?.write {
-            try {
-                val cluster = clusterRepository.findById(id).orElseThrow()
-                clusterRepository.delete(cluster)
-                routingService.removeDynamicRoute(cluster)
-                addResponseTimeLocks.remove(id)
-                clusterResponseTimeInfos.remove(id)
-                true
-            } catch (e: NoSuchElementException) {
-                false
-            }
-        } ?: throw ClusterServiceException("ID $id not found in addResponseTimeLocks")
+        return runBlocking {
+            addResponseTimeLocks[id]?.withLock {
+                try {
+                    val cluster = clusterRepository.findById(id).orElseThrow()
+                    clusterRepository.delete(cluster)
+                    routingService.removeDynamicRoute(cluster)
+                    addResponseTimeLocks.remove(id)
+                    clusterResponseTimeInfos.remove(id)
+                    true
+                } catch (e: NoSuchElementException) {
+                    false
+                }
+            } ?: false
+        }
     }
 
     override fun getUsedInstances(): Set<InstanceHandle> {
@@ -298,27 +325,36 @@ class ClusterServiceImpl : ClusterService {
         })
     }
 
-    private fun manageInstanceStates(cluster: Cluster) {
-        addResponseTimeLocks[cluster.id]?.write {
+    private fun manageInstanceStates(cluster: Cluster, getTopTwo: Boolean = true) {
             if (!cluster.enableInstanceStateManagement) return
             if (cluster.instances.size == 0) return
-            if (clusterResponseTimeInfos[cluster.id]?.lastTransitionTime?.plusSeconds(300)?.isAfter(Instant.now()) == true) return
+            if (clusterResponseTimeInfos[cluster.id]?.lastTransitionTime?.plusMillis(transitionInterval)
+                    ?.isAfter(Instant.now()) == true
+            ) return
 
-            val (newPrimary, newBackup) = getTopTwoInstances(cluster)
+            logger.info("Managing instance states")
+            clusterResponseTimeInfos[cluster.id]?.flags?.clear()
 
-            logger.info("Old access instance ${cluster.accessInstance}. Old backup instance ${cluster.backupInstance}.")
-            logger.info("New access instance $newPrimary. New backup instance $newBackup.")
+            if (getTopTwo) {
+                val (newPrimary, newBackup) = getTopTwoInstances(cluster)
 
-            if (!(newPrimary == cluster.accessInstance && newBackup == cluster.backupInstance)) {
-                cluster.accessInstance = newPrimary
-                cluster.backupInstance = newBackup
-                clusterRepository.save(cluster)
+                logger.info("Old access instance ${cluster.accessInstance}. Old backup instance ${cluster.backupInstance}.")
+                logger.info("New access instance $newPrimary. New backup instance $newBackup.")
+
+                if (!(newPrimary == cluster.accessInstance && newBackup == cluster.backupInstance)) {
+                    cluster.accessInstance = newPrimary
+                    cluster.backupInstance = newBackup
+                    clusterRepository.save(cluster)
+                    transitionClusterAccess(cluster)
+                }
+            } else {
+                logger.info("Access instance ${cluster.accessInstance}. Backup instance ${cluster.backupInstance}.")
                 transitionClusterAccess(cluster)
             }
-        }
     }
 
     private fun getTopTwoInstances(cluster: Cluster): Pair<InstanceHandle?, InstanceHandle?> {
+        logger.info("Getting top two instances. AccessInstance: ${cluster.accessInstance}. Backup Instance: ${cluster.backupInstance}. Instances: ${cluster.instances}")
         var newPrimary = cluster.accessInstance
         var newBackup = cluster.backupInstance
         cluster.instances.forEach { entry ->
@@ -341,8 +377,8 @@ class ClusterServiceImpl : ClusterService {
             else
                 listOfNotNull(cluster.accessInstance)
         val infos = serviceProvider.getInstances(cluster.instances.map { it.handle })
-        val toStop = infos.filter { it.handle == cluster.accessInstance || (cluster.enableHotBackup && it.handle == cluster.backupInstance) }
-            .filter { InstanceState.StoppingInstanceStates.contains(it.state) }
+        val toStop = infos.filter { !(it.handle == cluster.accessInstance || (cluster.enableHotBackup && it.handle == cluster.backupInstance)) }
+            .filter { !InstanceState.StoppingInstanceStates.contains(it.state) }
         logger.info("Instances to start: $toStart")
         logger.info("Instances to stop: $toStop")
 
@@ -364,16 +400,20 @@ class ClusterServiceImpl : ClusterService {
     }
 
     override fun editInstance(id: UUID, handle: InstanceHandle, payload: Map<String, Any>): ClusterMembership {
-        val cluster = getCluster(id)
-        val membership = cluster.instances.find { it.handle == handle } ?: throw Exception("Membership not found in cluster")
-        payload.forEach { (key: String, value: Any) ->
-            if (key == "priority" && value is String) {
-                logger.info("Setting $key to $value")
-                membership.priority = value.toInt()
-            }
+        return runBlocking {
+            addResponseTimeLocks[id]?.withLock {
+                val cluster = getCluster(id)
+                val membership = cluster.instances.find { it.handle == handle } ?: throw Exception("Membership not found in cluster")
+                payload.forEach { (key: String, value: Any) ->
+                    if (key == "priority" && value is String) {
+                        logger.info("Setting $key to $value")
+                        membership.priority = value.toInt()
+                    }
+                }
+                clusterRepository.save(cluster)
+                membership
+            } ?: throw ClusterServiceException("ID $id not found in addResponseTimeLocks")
         }
-        clusterRepository.save(cluster)
-        return membership
     }
 
     private fun removeDeletedInstances(cluster: Cluster): Cluster {
@@ -386,15 +426,15 @@ class ClusterServiceImpl : ClusterService {
             }
         }
         toDelete.forEach { cluster.instances.remove(it) }
-        if(toDelete.any {it.handle == cluster.accessInstance}) {
+        if (toDelete.any { it.handle == cluster.accessInstance }) {
             cluster.accessInstance = null
             cluster.backupInstance = null // necessary to avoid edge cases where we have a backup instance but no primary instance
         }
-        if(toDelete.any {it.handle == cluster.backupInstance}) {
+        if (toDelete.any { it.handle == cluster.backupInstance }) {
             cluster.backupInstance = null
         }
 
-        if(toDelete.any {it.handle == cluster.accessInstance} || toDelete.any {it.handle == cluster.backupInstance}) {
+        if (toDelete.any { it.handle == cluster.accessInstance } || toDelete.any { it.handle == cluster.backupInstance }) {
             val (newPrimary, newBackup) = getTopTwoInstances(cluster)
             logger.info("New access instance $newPrimary. New backup instance $newBackup.")
             cluster.accessInstance = newPrimary
@@ -408,13 +448,18 @@ class ClusterServiceImpl : ClusterService {
 
     override fun addResponseTime(id: UUID, time: Long) {
         val now = Instant.now()
-        if(clusterResponseTimeInfos[id]?.lastUpdateTime?.plusSeconds(2)?.isBefore(now) == true) {
+        if (clusterResponseTimeInfos[id]?.lastUpdateTime?.plusMillis(addResponseTimeInterval)?.isBefore(now) == true) {
             try {
-                if (addResponseTimeLocks[id]?.writeLock()?.tryLock(0, TimeUnit.SECONDS) == true) {
+                if (addResponseTimeLocks[id]?.tryLock() == true) {
                     val cluster = clusterResponseTimeInfos[id]
 
-                    if (cluster == null || cluster.lastUpdateTime.plusSeconds(2).isAfter(now)) {
+                    if (cluster == null || cluster.lastUpdateTime.plusMillis(addResponseTimeInterval).isAfter(now)) {
                         return
+                    }
+
+                    if (cluster.requestCount > minRequestCount && time > cluster.rtt + 4 * cluster.rttVar) {
+                        logger.info("Flagging request for cluster $id. Request Count: ${cluster.requestCount}, RTT: ${cluster.rtt}, RTTVAR: ${cluster.rttVar}, TIME: $time")
+                        flagRequest(id)
                     }
 
                     if (cluster.requestCount != 0L) {
@@ -428,37 +473,37 @@ class ClusterServiceImpl : ClusterService {
                     cluster.lastUpdateTime = now
                     clusterResponseTimeInfos[id] = cluster
 
-                    if (cluster.requestCount > 10 && time > cluster.rtt + 4 * cluster.rttVar) {
-                        flagRequest(id)
-                    }
+                    logger.info("New response time added to cluster $id. Request Count: ${cluster.requestCount}, RTT: ${cluster.rtt}, RTTVAR: ${cluster.rttVar}, TIME: $time")
                 }
             } finally {
-                addResponseTimeLocks[id]?.writeLock()?.unlock()
+                addResponseTimeLocks[id]?.unlock()
             }
         }
     }
 
-    private fun flagRequest(id: UUID) {
+    override fun flagRequest(id: UUID) {
+        logger.info("Flagging request for cluster $id.")
         val now = Instant.now()
         clusterResponseTimeInfos[id]?.flags?.add(now)
-        while(clusterResponseTimeInfos[id]?.flags?.first?.isBefore(now.minusSeconds(60)) == true) {
+        while (clusterResponseTimeInfos[id]?.flags?.first?.isBefore(now.minusSeconds(60)) == true) {
             clusterResponseTimeInfos[id]?.flags?.removeFirst()
         }
 
-        if((clusterResponseTimeInfos[id]?.flags?.size ?: 0) > 5) {
+        if ((clusterResponseTimeInfos[id]?.flags?.size ?: 0) > 4) {
             coroutineScope.launch {
-                manageInstanceStates(getCluster(id))
+                addResponseTimeLocks[id]?.withLock {
+                    val cluster = getCluster(id)
+                    val membership = cluster.instances.find { it.handle == cluster.accessInstance }
+                    if (membership != null && cluster.enableAutomaticPriorityAdjustment) ++membership.priority
+                    clusterRepository.save(cluster)
+                    manageInstanceStates(cluster)
+                }
             }
         }
     }
 
     fun getResponseTimeInfo(id: UUID): ClusterResponseTimeInfo {
-        var ret = ClusterResponseTimeInfo()
-        addResponseTimeLocks[id]?.read {
-            val info = clusterResponseTimeInfos[id] ?: throw ClusterServiceException("ID not found in clusterResponseTimeInfos")
-            ret = ClusterResponseTimeInfo(info)
-        }
-        return ret
+        val info = clusterResponseTimeInfos[id] ?: throw ClusterServiceException("ID not found in clusterResponseTimeInfos")
+        return ClusterResponseTimeInfo(info)
     }
-
 }

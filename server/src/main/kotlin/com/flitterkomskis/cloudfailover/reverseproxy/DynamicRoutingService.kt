@@ -5,7 +5,6 @@ import com.flitterkomskis.cloudfailover.cloudproviders.ServiceProvider
 import com.flitterkomskis.cloudfailover.cluster.Cluster
 import com.flitterkomskis.cloudfailover.cluster.ClusterService
 import java.util.HashSet
-import javax.annotation.PostConstruct
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -62,7 +61,7 @@ class DynamicRoutingService {
         zuulProperties.routes[cluster.id.toString()] = ZuulRoute(
             cluster.id.toString(),
             "$ACCESS_PREFIX/${cluster.id}/**",
-            null,
+            cluster.id.toString(),
             url,
             true,
             false,

@@ -61,7 +61,7 @@ class Cluster(var name: String = "") {
 
     var enableAutomaticPriorityAdjustment: Boolean = false
 
-    var state: ClusterState = ClusterState.NO_INSTANCES
+    var state: ClusterState = ClusterState.OPERATIONAL
 
     /**
      * Adds an instance to the cluster.

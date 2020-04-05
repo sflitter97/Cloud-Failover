@@ -21,7 +21,11 @@ interface ClusterFormState {
     instances: Array<{}>,
     targetPort: number,
     targetPath: string,
-    accessInstance?: {}
+    accessInstance?: {},
+    backupInstance?: {},
+    enableInstanceStateManagement: string,
+    enableHotBackup: string,
+    enableAutomaticPriorityAdjustment: string
   };
   instanceInfos: Array<Instance>;
 }
@@ -35,18 +39,28 @@ class ClusterForm extends React.Component<ClusterFormProps, ClusterFormState> {
         instances: props.cluster?.instances || Array<{}>(),
         targetPort: props.cluster?.targetPort || 0,
         targetPath: props.cluster?.targetPath || "",
-        accessInstance: props.cluster?.accessInstance
+        accessInstance: props.cluster?.accessInstance,
+        backupInstance: props.cluster?.backupInstance,
+        enableInstanceStateManagement: props.cluster?.enableInstanceStateManagement || 'false',
+        enableHotBackup: props.cluster?.enableHotBackup || 'false',
+        enableAutomaticPriorityAdjustment: props.cluster?.enableAutomaticPriorityAdjustment || 'false'
       },
       instanceInfos: Array<Instance>()
     }
   }
 
   handleChange = (e: React.FormEvent<HTMLInputElement>) => {
-    // e.persist()
-    // console.log(e.currentTarget);
+    e.persist()
+    console.log(e.currentTarget);
     let value = e.currentTarget.value
-    if(e.currentTarget.name === 'accessInstance') {
+    if(e.currentTarget.name === 'accessInstance' || e.currentTarget.name === 'backupInstance') {
       value = JSON.parse(value);
+    } else if(e.currentTarget.name === 'enableInstanceStateManagement') {
+      value = this.state.formControls.enableInstanceStateManagement === 'true' ? 'false' : 'true'
+    } else if(e.currentTarget.name === 'enableHotBackup') {
+      value = this.state.formControls.enableHotBackup === 'true' ? 'false' : 'true'
+    } else if(e.currentTarget.name === 'enableAutomaticPriorityAdjustment') {
+      value = this.state.formControls.enableAutomaticPriorityAdjustment === 'true' ? 'false' : 'true'
     }
     this.setState({
       formControls: {
@@ -62,7 +76,12 @@ class ClusterForm extends React.Component<ClusterFormProps, ClusterFormState> {
       name: this.state.formControls.name,
       instances: this.state.formControls.instances,
       targetPort: this.state.formControls.targetPort,
-      targetPath: this.state.formControls.targetPath
+      targetPath: this.state.formControls.targetPath,
+      accessInstance: this.state.formControls.accessInstance,
+      backupInstance: this.state.formControls.backupInstance,
+      enableInstanceStateManagement: this.state.formControls.enableInstanceStateManagement,
+      enableHotBackup: this.state.formControls.enableHotBackup,
+      enableAutomaticPriorityAdjustment: this.state.formControls.enableAutomaticPriorityAdjustment
     }
     this.props.onSubmit(formData, this.state.formControls.accessInstance)
   }
@@ -122,6 +141,12 @@ class ClusterForm extends React.Component<ClusterFormProps, ClusterFormState> {
                 { this.generateSelectOptions() }
               </Form.Control>
             </Form.Group>
+            <Form.Group controlId="clusterForm.ControlClusterBackupInstance">
+              <Form.Label>Backup Instance</Form.Label>
+              <Form.Control name="backupInstance" as="select" defaultValue={this.props.cluster?.backupInstance !== undefined ? JSON.stringify(this.props.cluster?.backupInstance) : "please-select"} onChange={this.handleChange}>
+                { this.generateSelectOptions() }
+              </Form.Control>
+            </Form.Group>
             <Form.Group controlId="clusterForm.ControlClusterPort">
               <Form.Label>Port</Form.Label>
               <Form.Control type="number" name="targetPort" placeholder="Port" defaultValue={this.props.cluster?.targetPort} onChange={this.handleChange} />
@@ -135,6 +160,15 @@ class ClusterForm extends React.Component<ClusterFormProps, ClusterFormState> {
               selected={this.state.formControls.instances}
               updateInstanceInfos={this.updateInstanceInfos}
             />
+            <Form.Group controlId="clusterForm.ControlClusterInstanceManagement">
+              <Form.Check type="checkbox" name="enableInstanceStateManagement" label="Enable Instance State Management" checked={this.state.formControls.enableInstanceStateManagement === 'true'} onChange={this.handleChange} />
+            </Form.Group>
+            <Form.Group controlId="clusterForm.ControlClusterHotBackup">
+              <Form.Check type="checkbox" name="enableHotBackup" label="Enable Hot Backup" checked={this.state.formControls.enableHotBackup === 'true'} onChange={this.handleChange} />
+            </Form.Group>
+            <Form.Group controlId="clusterForm.ControlClusterPriorityAdjustment">
+              <Form.Check type="checkbox" name="enableAutomaticPriorityAdjustment" label="Enable Automatic Priority Adjustment" checked={this.state.formControls.enableAutomaticPriorityAdjustment === 'true'} onChange={this.handleChange} />
+            </Form.Group>
             <Form.Row className={styles.formRow}>
               <Button className={styles.button} variant="primary" type="submit">
                   {this.props.submitButtonName}

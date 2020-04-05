@@ -8,6 +8,7 @@ import BootstrapTable from 'react-bootstrap-table-next';
 import { Loading } from '../loading/Loading'
 import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
+import ClusterState from '../../interfaces/ClusterState';
 
 export interface ClusterListProps extends RouteComponentProps {
   clusters: Array<Cluster>;
@@ -45,8 +46,14 @@ class ClusterList extends React.Component<ClusterListProps, ClusterListState> {
     .then(clusterPromises => {
       return clusterPromises.map((value) => value.json())
     })
+    .then(clusterJsonPromises => Promise.all<{state: string}>(clusterJsonPromises))
+    .then(clusterJsonPromises => {
+      return clusterJsonPromises.map((value) => {
+        return {...value, state: ClusterState.getState(value.state)}
+      })
+    })
     // gather the individual json promises into one
-    .then(clusterJsonPromises => Promise.all<Cluster>(clusterJsonPromises))
+    .then(clusterJsonPromises => Promise.all<Cluster>(clusterJsonPromises as any))
     .then(clusterJson => {
       this.props.handleUpdateClusters(clusterJson);
       this.setState({
@@ -77,6 +84,10 @@ class ClusterList extends React.Component<ClusterListProps, ClusterListState> {
         dataField: 'name',
         text: 'Name',
         sort: true
+      },
+      {
+        dataField: 'state',
+        text: 'State'
       },
       {
         dataField: 'targetPort',
@@ -125,6 +136,7 @@ class ClusterList extends React.Component<ClusterListProps, ClusterListState> {
               return {
                 id: cluster.id,
                 name: cluster.name,
+                state: cluster.state.toString(),
                 targetPort: cluster.targetPort,
                 targetPath: cluster.targetPath,
                 instances: cluster.instances.length,

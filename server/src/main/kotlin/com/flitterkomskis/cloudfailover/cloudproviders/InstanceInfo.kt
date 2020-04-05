@@ -16,7 +16,7 @@ data class InstanceInfo(
     val provider: Provider,
     val name: String,
     val type: String,
-    val state: InstanceState,
+    var state: InstanceState,
     val handle: InstanceHandle,
     val host: String
 )

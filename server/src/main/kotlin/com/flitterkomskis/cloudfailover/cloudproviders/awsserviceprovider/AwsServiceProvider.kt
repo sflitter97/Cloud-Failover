@@ -1,7 +1,7 @@
 package com.flitterkomskis.cloudfailover.cloudproviders.awsserviceprovider
 
-import com.flitterkomskis.cloudfailover.cloudproviders.InstanceHandle
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceDeletedException
+import com.flitterkomskis.cloudfailover.cloudproviders.InstanceHandle
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceInfo
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
 import com.flitterkomskis.cloudfailover.cloudproviders.Provider
@@ -274,8 +274,8 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
             } else {
                 throw AwsServiceProviderException("Instance with ID ${handle.instanceId} not found.")
             }
-        } catch(e: Ec2Exception) {
-            if(e.awsErrorDetails().errorCode() == "InvalidInstanceID.NotFound") {
+        } catch (e: Ec2Exception) {
+            if (e.awsErrorDetails().errorCode() == "InvalidInstanceID.NotFound") {
                 throw InstanceDeletedException(e.message ?: "")
             }
             throw AwsServiceProviderException(e.message ?: "")

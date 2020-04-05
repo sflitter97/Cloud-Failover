@@ -12,7 +12,12 @@ import com.google.api.client.http.HttpTransport
 import com.google.api.client.json.JsonFactory
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.compute.Compute
-import com.google.api.services.compute.model.*
+import com.google.api.services.compute.model.AccessConfig
+import com.google.api.services.compute.model.AttachedDisk
+import com.google.api.services.compute.model.AttachedDiskInitializeParams
+import com.google.api.services.compute.model.Instance
+import com.google.api.services.compute.model.NetworkInterface
+import com.google.api.services.compute.model.ZoneList
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.time.Instant
@@ -241,8 +246,8 @@ class GcpServiceProvider(private val projectId: String) {
                 handle,
                 response.networkInterfaces[0].network
             )
-        } catch(e: GoogleJsonResponseException) {
-            if(e.statusCode == 404) {
+        } catch (e: GoogleJsonResponseException) {
+            if (e.statusCode == 404) {
                 throw InstanceDeletedException(e.message ?: "")
             } else {
                 throw GcpServiceProviderException("Error getting instance ${e.message}.")

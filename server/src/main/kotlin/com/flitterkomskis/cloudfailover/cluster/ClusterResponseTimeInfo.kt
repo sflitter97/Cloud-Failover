@@ -10,7 +10,7 @@ data class ClusterResponseTimeInfo(
     var flags: LinkedList<Instant> = LinkedList(),
     var lastUpdateTime: Instant = Instant.EPOCH,
     var lastTransitionTime: Instant = Instant.EPOCH
-){
+) {
     constructor(copy: ClusterResponseTimeInfo) : this(
         copy.requestCount,
         copy.rtt,
