@@ -80,7 +80,7 @@ class ServiceProvider() {
     /**
      * Retrieves the [InstanceInfo] for the instance identified by the given handle. Will call a method on the
      * handle to determine which of the overloaded functions below to call.
-     * @param handle Stringified [InstanceHandle] that uniquely identifies the instance.
+     * @param handle The [InstanceHandle] that uniquely identifies the instance.
      * @return The [InstanceInfo] for the given handle.
      */
     fun getInstance(handle: InstanceHandle): InstanceInfo {
@@ -91,6 +91,12 @@ class ServiceProvider() {
         }
     }
 
+    /**
+     * Retrieves the [InstanceInfo]s for the instances in handles. Asynchronously calls getInstance on each handle
+     * in the list.
+     * @param handles The [InstanceHandle]s that uniquely identify each instance to get.
+     * @return The [InstanceInfo]s for the given handles.
+     */
     fun getInstances(handles: List<InstanceHandle>): List<InstanceInfo> {
         return runBlocking {
             coroutineScope {

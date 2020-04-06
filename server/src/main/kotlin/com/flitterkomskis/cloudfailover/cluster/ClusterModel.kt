@@ -5,6 +5,10 @@ import java.util.UUID
 import org.springframework.data.annotation.TypeAlias
 import org.springframework.hateoas.server.core.Relation
 
+/**
+ * Represents a [Cluster] to be returned from API requests. The cluster object has implementation details we don't want
+ * to expose, so this class allows us to only expose parts of it.
+ */
 @TypeAlias("cluster")
 @Relation(collectionRelation = "clusters", itemRelation = "cluster")
 data class ClusterModel(

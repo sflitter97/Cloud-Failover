@@ -5,11 +5,16 @@ import java.util.UUID
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.hateoas.EntityModel
+import org.springframework.hateoas.Link
 import org.springframework.hateoas.server.RepresentationModelAssembler
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder
 import org.springframework.stereotype.Component
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder
 
+/**
+ * Transforms a [ClusterMembership] into an [EntityModel] of the cluster membership, which contains the cluster
+ * membership and relevant [Link]s in the REST API.
+ */
 @Component
 class ClusterMembershipAssembler : RepresentationModelAssembler<ClusterMembership, EntityModel<ClusterMembership>> {
     private val logger: Logger = LoggerFactory.getLogger(ClusterModelAssembler::class.java)

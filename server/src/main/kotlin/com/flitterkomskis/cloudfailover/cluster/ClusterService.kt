@@ -81,12 +81,33 @@ interface ClusterService {
      */
     fun deleteCluster(id: UUID): Boolean
 
+    /**
+     * Gets and returns a list of [InstanceHandle]s representing all instances which have been assigned to a cluster.
+     * @return A set of [InstanceHandle], which are the instances that already have a [ClusterMembership] in a [Cluster].
+     */
     fun getUsedInstances(): Set<InstanceHandle>
 
+    /**
+     * Updated the existing [ClusterMembership] given by id and handle using the payload.
+     * @param id ID that uniquely identifies the [Cluster].
+     * @param handle [InstanceHandle] that uniquely identifies the instance.
+     * @param payload The information with which to update the instance.
+     * @return The [ClusterMembership] after it has been updated.
+     */
     fun editInstance(id: UUID, handle: InstanceHandle, payload: Map<String, Any>): ClusterMembership
 
+    /**
+     * Adds a new response time measurement to the cluster given by id. Updates the [ClusterResponseTimeInfo] object as
+     * necessary.
+     * @param id ID that uniquely identifies the cluster.
+     * @param time Response time of the request to the cluster in milliseconds.
+     */
     fun addResponseTime(id: UUID, time: Long)
 
+    /**
+     * Flags a request for the cluster given by id. Updates the [ClusterResponseTimeInfo] object as necessary.
+     * @param id ID that uniquely identifies the cluster.
+     */
     fun flagRequest(id: UUID)
 }
 
@@ -108,6 +129,10 @@ class ClusterServiceImpl : ClusterService {
     var addResponseTimeInterval = 2000L
     var transitionInterval = 300000L
 
+    /**
+     * Initializes the [ClusterService] by creating mutexes and [ClusterResponseTimeInfo] objects for each existing
+     * cluster. Run shortly after the program starts.
+     */
     @EventListener
     fun initialize(event: ContextRefreshedEvent) {
         val clusters = listClusters()
@@ -317,6 +342,11 @@ class ClusterServiceImpl : ClusterService {
         }
     }
 
+    /**
+     * Gets and returns a list of [InstanceHandle]s representing all instances which have been assigned to a cluster
+     * in the Mongo Database.
+     * @return A set of [InstanceHandle], which are the instances that already have a [ClusterMembership] in a [Cluster].
+     */
     override fun getUsedInstances(): Set<InstanceHandle> {
         val clusters = listClusters()
         return clusters.fold(hashSetOf<InstanceHandle>(), { instances, cluster ->
@@ -325,6 +355,12 @@ class ClusterServiceImpl : ClusterService {
         })
     }
 
+    /**
+     * Manages the instance states of the clusters, getting the top two instances of the cluster, setting them
+     * to the primary and backup instances, and transitioning access to them.
+     * @param cluster The cluster to manage.
+     * @param getTopTwo Whether to get and change the top two instances of the cluster of leave them as is.
+     */
     private fun manageInstanceStates(cluster: Cluster, getTopTwo: Boolean = true) {
             if (!cluster.enableInstanceStateManagement) return
             if (cluster.instances.size == 0) return
@@ -353,6 +389,13 @@ class ClusterServiceImpl : ClusterService {
             }
     }
 
+    /**
+     * Returns the best two instances of the cluster, determined by their priority number. A lower priority number
+     * mean higher priority. Ties are broken arbitrarily, except if an instance is already the primary or backup
+     * instance it will be preferred over a new instance.
+     * @param cluster The cluster for which to get the top two instances.
+     * @return The top two instances of the cluster.
+     */
     private fun getTopTwoInstances(cluster: Cluster): Pair<InstanceHandle?, InstanceHandle?> {
         logger.info("Getting top two instances. AccessInstance: ${cluster.accessInstance}. Backup Instance: ${cluster.backupInstance}. Instances: ${cluster.instances}")
         var newPrimary = cluster.accessInstance
@@ -370,6 +413,12 @@ class ClusterServiceImpl : ClusterService {
         return Pair(newPrimary, newBackup)
     }
 
+    /**
+     * Transition cluster access to the cluster's primary and backup access instances. Sends start requests to these
+     * instances and stop requests to all others. Once the new instances have been started it will request the
+     * dynamic routing service change its route to the new instance.
+     * @param cluster The cluster for which to transition access.
+     */
     private fun transitionClusterAccess(cluster: Cluster) {
         logger.info("Transitioning access for cluster ${cluster.id}")
         val toStart = if (cluster.enableHotBackup)
@@ -395,10 +444,18 @@ class ClusterServiceImpl : ClusterService {
             toStop.forEach { serviceProvider.waitForState(it.handle, InstanceState.STOPPED) }
             logger.info("Transition completed")
             clusterRepository.setState(cluster.id, ClusterState.OPERATIONAL)
+            clusterResponseTimeInfos[cluster.id]?.requestCount = 0L
             clusterResponseTimeInfos[cluster.id]?.lastTransitionTime = Instant.now()
         }
     }
 
+    /**
+     * Updated the existing [ClusterMembership] given by id and handle using the payload.
+     * @param id ID that uniquely identifies the [Cluster].
+     * @param handle [InstanceHandle] that uniquely identifies the instance.
+     * @param payload The information with which to update the instance.
+     * @return The [ClusterMembership] after it has been updated.
+     */
     override fun editInstance(id: UUID, handle: InstanceHandle, payload: Map<String, Any>): ClusterMembership {
         return runBlocking {
             addResponseTimeLocks[id]?.withLock {
@@ -416,6 +473,12 @@ class ClusterServiceImpl : ClusterService {
         }
     }
 
+    /**
+     * Checks for and removes instances which have been deleted from the service provider rather than through the
+     * service.
+     * @param cluster The cluster for which to remove deleted instances.
+     * @return The cluster after all stale instance handles have been deleted.
+     */
     private fun removeDeletedInstances(cluster: Cluster): Cluster {
         val toDelete = cluster.instances.filter {
             try {
@@ -446,6 +509,12 @@ class ClusterServiceImpl : ClusterService {
         return cluster
     }
 
+    /**
+     * Adds a new response time measurement to the cluster given by id. Updates the [ClusterResponseTimeInfo] object as
+     * necessary.
+     * @param id ID that uniquely identifies the cluster.
+     * @param time Response time of the request to the cluster in milliseconds.
+     */
     override fun addResponseTime(id: UUID, time: Long) {
         val now = Instant.now()
         if (clusterResponseTimeInfos[id]?.lastUpdateTime?.plusMillis(addResponseTimeInterval)?.isBefore(now) == true) {
@@ -481,6 +550,10 @@ class ClusterServiceImpl : ClusterService {
         }
     }
 
+    /**
+     * Flags a request for the cluster given by id. Updates the [ClusterResponseTimeInfo] object as necessary.
+     * @param id ID that uniquely identifies the cluster.
+     */
     override fun flagRequest(id: UUID) {
         logger.info("Flagging request for cluster $id.")
         val now = Instant.now()
@@ -502,6 +575,11 @@ class ClusterServiceImpl : ClusterService {
         }
     }
 
+    /**
+     * Returns the [ClusterResponseTimeInfo] object for a cluster. Used in tests.
+     * @param id ID that uniquely identifies the cluster.
+     * @return The [ClusterResponseTimeInfo] for the cluster with the given id.
+     */
     fun getResponseTimeInfo(id: UUID): ClusterResponseTimeInfo {
         val info = clusterResponseTimeInfos[id] ?: throw ClusterServiceException("ID not found in clusterResponseTimeInfos")
         return ClusterResponseTimeInfo(info)

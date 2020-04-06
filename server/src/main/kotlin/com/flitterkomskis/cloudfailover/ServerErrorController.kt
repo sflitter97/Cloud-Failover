@@ -8,7 +8,10 @@ import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.RequestMapping
 
-// based on https://thepracticaldeveloper.com/2019/09/09/custom-error-handling-rest-controllers-spring-boot/
+/**
+ * Controller class for handling errors from other controllers. Based on
+ * https://thepracticaldeveloper.com/2019/09/09/custom-error-handling-rest-controllers-spring-boot/.
+ */
 @Controller
 class ServerErrorController(e: ErrorAttributes) : AbstractErrorController(e) {
     override fun getErrorPath(): String {

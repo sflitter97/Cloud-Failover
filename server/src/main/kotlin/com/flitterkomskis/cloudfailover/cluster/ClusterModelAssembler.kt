@@ -11,15 +11,15 @@ import org.springframework.stereotype.Component
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder
 
 /**
- * Transforms a [Cluster] into an [EntityModel] of the cluster, which contains the cluster and relevant [Link]s in
- * the REST API.
+ * Transforms a [Cluster] into an [EntityModel] of the cluster model, which contains the cluster model and
+ * relevant [Link]s in the REST API.
  */
 @Component
 class ClusterModelAssembler : RepresentationModelAssembler<Cluster, EntityModel<ClusterModel>> {
     private val logger: Logger = LoggerFactory.getLogger(ClusterModelAssembler::class.java)
 
     /**
-     * Takes the provided [Cluster] and returns an [EntityModel] of the cluster.
+     * Takes the provided [Cluster] and returns an [EntityModel] of the cluster model.
      * @param entity The cluster to convert.
      * @return The [EntityModel] of entity.
      */

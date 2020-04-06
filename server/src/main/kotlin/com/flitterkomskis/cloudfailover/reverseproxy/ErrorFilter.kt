@@ -11,6 +11,10 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cloud.netflix.zuul.filters.support.FilterConstants
 import org.springframework.stereotype.Component
 
+/**
+ * Filter that is run when there is an error forwarding a request. Can occur when an instance is down. Allows us to
+ * flag requests for instances we're not able to reach.
+ */
 @Component
 class ErrorFilter : ZuulFilter() {
     private val logger: Logger = LoggerFactory.getLogger(ErrorFilter::class.java)

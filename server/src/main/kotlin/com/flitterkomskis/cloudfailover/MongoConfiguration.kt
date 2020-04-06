@@ -4,8 +4,6 @@ import com.mongodb.ConnectionString
 import com.mongodb.MongoClientSettings
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
@@ -22,7 +20,6 @@ import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration
 @Configuration
 @Profile("production")
 class MongoConfiguration : AbstractMongoClientConfiguration() {
-    private val logger: Logger = LoggerFactory.getLogger(MongoConfiguration::class.java)
     private val CONN_STR_ENV_VAR = "MULTICLOUD_FAILOVER_MONGO_CONN_STR"
 
     override fun getDatabaseName(): String {

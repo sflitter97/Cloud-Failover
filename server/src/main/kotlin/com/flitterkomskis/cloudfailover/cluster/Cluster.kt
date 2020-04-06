@@ -1,6 +1,7 @@
 package com.flitterkomskis.cloudfailover.cluster
 
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceHandle
+import com.flitterkomskis.cloudfailover.cloudproviders.ServiceProvider
 import java.util.UUID
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.TypeAlias
@@ -18,7 +19,7 @@ class Cluster(var name: String = "") {
     @Id var id: UUID = UUID.randomUUID()
 
     /**
-     * List of instances to which this cluster can direct requests.
+     * List of cluster memberships to which this cluster can direct requests.
      */
     var instances: MutableList<ClusterMembership> = mutableListOf()
 
@@ -55,12 +56,28 @@ class Cluster(var name: String = "") {
      */
     var targetPath: String = ""
 
+    /**
+     * Toggle for whether to manage the instance states for this cluster. When True, will automatically request
+     * the [ServiceProvider] start the primary access instance (and backup if enableHotBackup is true) and stop all
+     * other clusters.
+     */
     var enableInstanceStateManagement: Boolean = false
 
+    /**
+     * Toggle for whether to start the backup access instance. Allows for faster cluster transitions at the expense
+     * of being billed for more cloud resources. This toggle is only valid when enableInstanceStateManagement is true.
+     */
     var enableHotBackup: Boolean = false
 
+    /**
+     * Toggle for whether instances will automatically have their priorities updated when cluster transitions occur.
+     * When false, the instance priorities will only change when the user updates them manually.
+     */
     var enableAutomaticPriorityAdjustment: Boolean = false
 
+    /**
+     * The state of the cluster.
+     */
     var state: ClusterState = ClusterState.OPERATIONAL
 
     /**

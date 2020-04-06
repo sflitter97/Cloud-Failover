@@ -244,7 +244,7 @@ class GcpServiceProvider(private val projectId: String) {
                 response.machineType,
                 getInstanceState(response.status),
                 handle,
-                response.networkInterfaces[0].network
+                response.networkInterfaces[0].accessConfigs[0].natIP
             )
         } catch (e: GoogleJsonResponseException) {
             if (e.statusCode == 404) {

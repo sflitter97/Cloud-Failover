@@ -13,6 +13,10 @@ import org.springframework.cloud.netflix.zuul.filters.support.FilterConstants.PO
 import org.springframework.cloud.netflix.zuul.filters.support.FilterConstants.SEND_RESPONSE_FILTER_ORDER
 import org.springframework.stereotype.Component
 
+/**
+ * Filter that is run after a response is received from an instance. Used to calculate the response time of an
+ * instance using the start time that is inserted in the pre filter.
+ */
 @Component
 class PostFilter : ZuulFilter() {
     private val logger: Logger = LoggerFactory.getLogger(PostFilter::class.java)
