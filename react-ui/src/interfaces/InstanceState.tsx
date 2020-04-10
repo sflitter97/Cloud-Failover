@@ -1,19 +1,3 @@
-// export type InstanceState =
-  // "Stopped" |
-  // "Running" |
-  // "Pending" |
-  // "Stopping" |
-  // "Deleted" |
-  // "Deleting" |
-  // "Unknown" |
-  // "Provisioning" |
-  // "Staging" |
-  // "Repairing" |
-  // "Terminated" |
-  // "Deallocated" |
-  // "Deallocating" |
-  // "Starting"
-
 class InstanceState {
   public static Stopped = new InstanceState("Stopped");
   public static Running = new InstanceState("Running");

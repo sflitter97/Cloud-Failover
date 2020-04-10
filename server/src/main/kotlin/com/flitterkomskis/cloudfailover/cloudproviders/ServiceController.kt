@@ -68,7 +68,7 @@ class ServiceController {
             logger.info("Request to create instance with payload $request")
             serviceProvider.createInstance(request.provider, request.name, request.type, request.imageId, request.region)
             return ResponseEntity<String>("", HttpHeaders(), HttpStatus.CREATED)
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             e.printStackTrace()
             return ResponseEntity("", HttpHeaders(), HttpStatus.BAD_REQUEST)
         }

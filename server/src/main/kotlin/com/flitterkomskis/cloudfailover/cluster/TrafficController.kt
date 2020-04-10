@@ -46,8 +46,14 @@ class TrafficController {
         return instanceModelAssembler.toModel(serviceProvider.getInstance(accessInstance))
     }
 
+    /**
+     * Changes the access instance of the [Cluster] with the given id.
+     * @param id ID that uniquely identifies the cluster.
+     * @param handle The [InstanceHandle] of the instance to make the primary access instance.
+     * @return The [ClusterModel] of the [Cluster] after the primary access instance has been changed.
+     */
     @PutMapping("/{id}")
-    fun switchCurrentCloudProvider(@PathVariable id: UUID, @RequestBody handle: InstanceHandle): EntityModel<Cluster> {
+    fun switchCurrentCloudProvider(@PathVariable id: UUID, @RequestBody handle: InstanceHandle): EntityModel<ClusterModel> {
         logger.info("Change access instance for cluster $id to $handle")
         val cluster = clusterService.getCluster(id)
         cluster.accessInstance = handle

@@ -5,13 +5,14 @@ import com.flitterkomskis.cloudfailover.cloudproviders.ServiceProvider
 import com.flitterkomskis.cloudfailover.cluster.Cluster
 import com.flitterkomskis.cloudfailover.cluster.ClusterService
 import java.util.HashSet
-import javax.annotation.PostConstruct
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cloud.netflix.zuul.filters.ZuulProperties
 import org.springframework.cloud.netflix.zuul.filters.ZuulProperties.ZuulRoute
 import org.springframework.cloud.netflix.zuul.web.ZuulHandlerMapping
+import org.springframework.context.event.ContextRefreshedEvent
+import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
 
 /**
@@ -19,21 +20,20 @@ import org.springframework.stereotype.Service
  * instance.
  */
 @Service
-class DynamicRoutingService @Autowired constructor(
-    private val zuulProperties: ZuulProperties,
-    private val zuulHandlerMapping: ZuulHandlerMapping,
-    private val clusterService: ClusterService
-) {
+class DynamicRoutingService {
     private val logger: Logger = LoggerFactory.getLogger(DynamicRoutingService::class.java)
     private val HTTP_PROTOCOL = "http://"
     private val ACCESS_PREFIX = "/api/access"
+    @Autowired private lateinit var zuulProperties: ZuulProperties
+    @Autowired private lateinit var zuulHandlerMapping: ZuulHandlerMapping
+    @Autowired private lateinit var clusterService: ClusterService
     @Autowired private lateinit var serviceProvider: ServiceProvider
 
     /**
      * Initializes the Zuul Proxy when the application starts. Re-adds existing routes to the proxy.
      */
-    @PostConstruct
-    fun initialize() {
+    @EventListener
+    fun initialize(event: ContextRefreshedEvent) {
         try {
             clusterService.listClusters().forEach { cluster ->
                 addDynamicRouteInZuul(cluster)
@@ -61,10 +61,11 @@ class DynamicRoutingService @Autowired constructor(
         zuulProperties.routes[cluster.id.toString()] = ZuulRoute(
             cluster.id.toString(),
             "$ACCESS_PREFIX/${cluster.id}/**",
-            null,
+            cluster.id.toString(),
             url,
             true,
-            false, HashSet()
+            false,
+            HashSet()
         )
     }
 

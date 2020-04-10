@@ -43,9 +43,6 @@ class ClusterDetails extends React.Component<ClusterDetailsProps, ClusterDetails
     if(formData.name !== undefined && formData.name !== this.state.selectedCluster.name) {
       postData.name = formData.name
     }
-    console.log(formData.instances)
-    console.log(this.state.selectedCluster.instances)
-    console.log(deepEqual(formData.instances), this.state.selectedCluster.instances)
     if(formData.instances !== undefined && !deepEqual(formData.instances, this.state.selectedCluster.instances)) {
       postData.instances = formData.instances
     }
@@ -54,6 +51,21 @@ class ClusterDetails extends React.Component<ClusterDetailsProps, ClusterDetails
     }
     if(formData.targetPath !== undefined && formData.targetPath !== this.state.selectedCluster.targetPath) {
       postData.targetPath = formData.targetPath
+    }
+    if(formData.accessInstance !== undefined && !deepEqual(formData.accessInstance, this.state.selectedCluster.accessInstance)) {
+      postData.accessInstance = formData.accessInstance
+    }
+    if(formData.backupInstance !== undefined && !deepEqual(formData.backupInstance, this.state.selectedCluster.backupInstance)) {
+      postData.backupInstance = formData.backupInstance
+    }
+    if(formData.enableInstanceStateManagement !== undefined && formData.enableInstanceStateManagement !== this.state.selectedCluster.enableInstanceStateManagement) {
+      postData.enableInstanceStateManagement = formData.enableInstanceStateManagement
+    }
+    if(formData.enableHotBackup !== undefined && formData.enableHotBackup !== this.state.selectedCluster.enableHotBackup) {
+      postData.enableHotBackup = formData.enableHotBackup
+    }
+    if(formData.enableAutomaticPriorityAdjustment !== undefined && formData.enableAutomaticPriorityAdjustment !== this.state.selectedCluster.enableAutomaticPriorityAdjustment) {
+      postData.enableAutomaticPriorityAdjustment = formData.enableAutomaticPriorityAdjustment
     }
     console.log(postData)
     let res = fetch(this.state.selectedCluster._links.self.href, {
@@ -66,20 +78,20 @@ class ClusterDetails extends React.Component<ClusterDetailsProps, ClusterDetails
     .then(res => res.json())
     .catch(console.log)
 
-    let res2 = Promise.resolve()
-    if(accessInstance !== undefined) {
-      res2 = fetch(this.state.selectedCluster._links.traffic.href, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(accessInstance)
-      })
-      .then(res => res.json())
-      .catch(console.log)
-    }
+    // let res2 = Promise.resolve()
+    // if(!(deepEqual(accessInstance, this.state.selectedCluster.accessInstance))) {
+    //   res2 = fetch(this.state.selectedCluster._links.traffic.href, {
+    //     method: 'PUT',
+    //     headers: {
+    //       'Content-Type': 'application/json'
+    //     },
+    //     body: JSON.stringify(accessInstance)
+    //   })
+    //   .then(res => res.json())
+    //   .catch(console.log)
+    // }
 
-    Promise.all([res, res2])
+    Promise.all([res/*, res2*/])
     .then(_ => this.props.history.push("/clusters"))
   }
 

@@ -1,5 +1,6 @@
 package com.flitterkomskis.cloudfailover.cloudproviders.awsserviceprovider
 
+import com.flitterkomskis.cloudfailover.cloudproviders.InstanceDeletedException
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceHandle
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceInfo
 import com.flitterkomskis.cloudfailover.cloudproviders.InstanceState
@@ -244,33 +245,40 @@ class AwsServiceProvider(private val accessKey: String, private val secretKey: S
         logger.info("Getting instance for handle $handle")
         val client = getClient(handle.region)
         val getRequest: DescribeInstancesRequest = DescribeInstancesRequest.builder().instanceIds(handle.instanceId).build()
-        val getResponse: DescribeInstancesResponse = client.describeInstances(getRequest)
-        var instance: Instance? = null
-        for (reservation in getResponse.reservations()) {
-            instance = reservation.instances().find { inst -> inst.instanceId() == handle.instanceId }
-            if (instance != null) {
-                break
+        try {
+            val getResponse: DescribeInstancesResponse = client.describeInstances(getRequest)
+            var instance: Instance? = null
+            for (reservation in getResponse.reservations()) {
+                instance = reservation.instances().find { inst -> inst.instanceId() == handle.instanceId }
+                if (instance != null) {
+                    break
+                }
             }
-        }
-        if (instance != null) {
-            val name = instance.tags().stream().filter { pair ->
-                pair.key() == "Name"
-            }.findFirst()
-                    .orElse(Tag.builder().key("Name").value("No name").build())
-                    .value()
+            if (instance != null) {
+                val name = instance.tags().stream().filter { pair ->
+                    pair.key() == "Name"
+                }.findFirst()
+                        .orElse(Tag.builder().key("Name").value("No name").build())
+                        .value()
 
-            val info = InstanceInfo(
-                    Provider.AWS,
-                    name,
-                    instance.instanceType().toString(),
-                    getInstanceState(instance.state().code()),
-                    handle,
-                    instance.publicDnsName()
-            )
-            logger.info("Instance info for handle $handle is $info")
-            return info
-        } else {
-            throw AwsServiceProviderException("Instance with ID ${handle.instanceId} not found.")
+                val info = InstanceInfo(
+                        Provider.AWS,
+                        name,
+                        instance.instanceType().toString(),
+                        getInstanceState(instance.state().code()),
+                        handle,
+                        instance.publicDnsName()
+                )
+                logger.info("Instance info for handle $handle is $info")
+                return info
+            } else {
+                throw AwsServiceProviderException("Instance with ID ${handle.instanceId} not found.")
+            }
+        } catch (e: Ec2Exception) {
+            if (e.awsErrorDetails().errorCode() == "InvalidInstanceID.NotFound") {
+                throw InstanceDeletedException(e.message ?: "")
+            }
+            throw AwsServiceProviderException(e.message ?: "")
         }
     }
 

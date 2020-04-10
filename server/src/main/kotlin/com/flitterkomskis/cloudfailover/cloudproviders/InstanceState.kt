@@ -1,7 +1,7 @@
 package com.flitterkomskis.cloudfailover.cloudproviders
 
 /**
- * Enum for the different states in instance can be in.
+ * Enum for the different states an instance can be in.
  */
 enum class InstanceState {
     STOPPED,
@@ -17,5 +17,9 @@ enum class InstanceState {
     TERMINATED,
     DEALLOCATED,
     DEALLOCATING,
-    STARTING
+    STARTING;
+
+    companion object {
+        val StoppingInstanceStates = hashSetOf(STOPPED, STOPPING, DELETED, DELETING, TERMINATED, DEALLOCATED, DEALLOCATING)
+    }
 }

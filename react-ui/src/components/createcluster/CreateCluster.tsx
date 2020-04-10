@@ -21,19 +21,19 @@ class CreateCluster extends React.Component<CreateClusterProps, CreateClusterSta
       body: JSON.stringify(formData)
     })
     .then(res => res.json())
-    .then(cluster => {
-      if(accessInstance !== undefined) {
-        fetch(cluster._links.traffic.href, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(accessInstance)
-        })
-        .then(res => res.json())
-        .catch(console.log)
-      }
-    })
+    // .then(cluster => {
+    //   if(accessInstance !== undefined) {
+    //     fetch(cluster._links.traffic.href, {
+    //       method: 'PUT',
+    //       headers: {
+    //         'Content-Type': 'application/json'
+    //       },
+    //       body: JSON.stringify(accessInstance)
+    //     })
+    //     .then(res => res.json())
+    //     .catch(console.log)
+    //   }
+    // })
     .catch(console.log)
     .then(_ => this.props.history.push("/clusters"))
   }
